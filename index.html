@@ -1,0 +1,648 @@
+import { useState, useEffect, useCallback } from "react";
+import {
+  Search, Phone, Mail, MapPin, Calendar, FileText, Users, BarChart3,
+  Tag, Settings, Plus, Clock, CheckCircle2, Circle, Wrench, Bell,
+  X, Send, Paperclip, TrendingUp, Shield, Smartphone,
+  PenLine, Upload, LogOut, AlertCircle, Loader, Save, RefreshCw
+} from "lucide-react";
+
+const SUPABASE_URL = "https://wlomwcwwlqbxosujztxn.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indsb213Y3d3bHFieG9zdWp6dHhuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4MjgyNjAsImV4cCI6MjA5ODQwNDI2MH0.wBVlo_NZIAedZpaeIAlg7CtbRVnPEd7lIOUrNTjyRaw";
+const AUTH = `${SUPABASE_URL}/auth/v1`;
+const API = `${SUPABASE_URL}/rest/v1`;
+
+const FD = "'Georgia', serif";
+const FB = "-apple-system, 'Inter', sans-serif";
+const C = {
+  rust: "#C2562F", dark: "#2E2A21", mid: "#3D382C",
+  sage: "#3D6E5C", tan: "#F7F3E9", cream: "#FBF9F3",
+  border: "#DCD3BC", muted: "#A9A18E", text: "#3A352A",
+  sub: "#8A8170", gold: "#B5872A", indigo: "#5B5BA8",
+};
+
+const STATUS_COLORS = {
+  "New Lead": C.sub, "Hot Lead": C.rust, "Follow Up": C.indigo,
+  "Proposal Sent": C.gold, "Won": C.sage, "Lost": "#999",
+};
+
+const SERVICE_TYPES = [
+  "Roof Replacement", "Roof Repair", "Solar Install",
+  "HVAC Replacement", "HVAC Repair", "Gutter Install", "Other"
+];
+
+async function sbFetch(path, opts = {}, token = null) {
+  const headers = {
+    "apikey": SUPABASE_KEY,
+    "Content-Type": "application/json",
+    "Prefer": "return=representation",
+    ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+    ...(opts.headers || {}),
+  };
+  const res = await fetch(path, { ...opts, headers });
+  const text = await res.text();
+  if (!res.ok) throw new Error(text || res.statusText);
+  return text ? JSON.parse(text) : null;
+}
+
+function Pill({ label }) {
+  const c = STATUS_COLORS[label] || C.sub;
+  return <span style={{ fontSize: 9.5, fontWeight: 700, padding: "2px 8px", borderRadius: 10, background: c + "22", color: c }}>{label}</span>;
+}
+
+function Btn({ children, primary, onClick, disabled, style = {} }) {
+  return (
+    <button onClick={onClick} disabled={disabled} style={{
+      display: "flex", alignItems: "center", gap: 6, padding: "8px 14px",
+      borderRadius: 7, border: primary ? "none" : `1px solid ${C.border}`,
+      background: primary ? C.rust : "#fff",
+      color: primary ? "#fff" : C.text,
+      fontSize: 12.5, fontWeight: 700, cursor: disabled ? "not-allowed" : "pointer",
+      fontFamily: FB, opacity: disabled ? 0.6 : 1, ...style
+    }}>{children}</button>
+  );
+}
+
+function Field({ label, children }) {
+  return (
+    <div>
+      <div style={{ fontSize: 9.5, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>{label}</div>
+      {children}
+    </div>
+  );
+}
+
+function Input({ value, onChange, placeholder, type = "text", style = {} }) {
+  return (
+    <input type={type} value={value} onChange={onChange} placeholder={placeholder}
+      style={{ width: "100%", padding: "8px 10px", border: `1px solid ${C.border}`, borderRadius: 6, fontSize: 12.5, fontFamily: FB, background: "#fff", outline: "none", boxSizing: "border-box", ...style }}
+    />
+  );
+}
+
+function Spinner() {
+  return <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: 40 }}><Loader size={24} color={C.rust} style={{ animation: "spin 1s linear infinite" }} /></div>;
+}
+
+// ── LOGIN ──────────────────────────────────────────────────────────
+function LoginScreen({ onLogin }) {
+  const [email, setEmail] = useState("sastotts@hotmail.com");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [detail, setDetail] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleLogin = async () => {
+    if (!email || !password) { setError("Please enter your email and password."); return; }
+    setLoading(true); setError(""); setDetail("");
+    try {
+      const res = await fetch(`${AUTH}/token?grant_type=password`, {
+        method: "POST",
+        headers: { "apikey": SUPABASE_KEY, "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError("Login failed — see details below.");
+        setDetail(JSON.stringify(data, null, 2));
+        return;
+      }
+      onLogin(data.access_token, data.user);
+    } catch (e) {
+      setError("Network error — could not reach Supabase.");
+      setDetail(e.message);
+    } finally { setLoading(false); }
+  };
+
+  return (
+    <div style={{ height: "100vh", background: C.dark, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: FB }}>
+      <div style={{ background: C.cream, borderRadius: 14, padding: "40px 38px", width: 420, boxShadow: "0 20px 60px rgba(0,0,0,0.4)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 28 }}>
+          <div style={{ width: 40, height: 40, borderRadius: 9, background: C.rust, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <Wrench size={20} color="#fff" strokeWidth={2.5} />
+          </div>
+          <div>
+            <div style={{ fontFamily: FD, fontSize: 18, fontWeight: 700, color: C.dark }}>FieldDesk CRM</div>
+            <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.5 }}>Roofing · Solar · HVAC</div>
+          </div>
+        </div>
+
+        <div style={{ fontSize: 15, fontWeight: 700, color: C.dark, marginBottom: 20, fontFamily: FD }}>Sign in to your account</div>
+
+        {error && (
+          <div style={{ background: "#FFF0ED", border: "1px solid #F5C4B8", borderRadius: 7, padding: "10px 12px", fontSize: 12.5, color: "#8B2020", marginBottom: 12 }}>
+            <div style={{ display: "flex", gap: 8, alignItems: "center", fontWeight: 700 }}><AlertCircle size={14} /> {error}</div>
+            {detail && <pre style={{ marginTop: 8, fontSize: 10.5, whiteSpace: "pre-wrap", wordBreak: "break-all", color: "#8B2020" }}>{detail}</pre>}
+          </div>
+        )}
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <Field label="Email">
+            <Input value={email} onChange={e => setEmail(e.target.value)} type="email" />
+          </Field>
+          <Field label="Password">
+            <Input value={password} onChange={e => setPassword(e.target.value)} placeholder="Enter your password" type="password" />
+          </Field>
+          <button onClick={handleLogin} disabled={loading}
+            style={{ width: "100%", padding: "11px", background: C.rust, color: "#fff", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: loading ? "not-allowed" : "pointer", fontFamily: FB, marginTop: 4, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+            {loading ? <><Loader size={15} /> Signing in…</> : "Sign In →"}
+          </button>
+        </div>
+
+        <div style={{ marginTop: 18, padding: "12px", background: C.tan, borderRadius: 8, fontSize: 11.5, color: C.sub }}>
+          <strong style={{ color: C.text }}>Your login:</strong><br />
+          Email: sastotts@hotmail.com<br />
+          Password: Sp00ky1222!
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── MAIN APP ───────────────────────────────────────────────────────
+export default function FieldDeskLive() {
+  const [token, setToken] = useState(null);
+  const [authUser, setAuthUser] = useState(null);
+  const [dbUser, setDbUser] = useState(null);
+  const [contacts, setContacts] = useState(null);
+  const [selected, setSelected] = useState(null);
+  const [activities, setActivities] = useState(null);
+  const [search, setSearch] = useState("");
+  const [view, setView] = useState("contacts");
+  const [showNewContact, setShowNewContact] = useState(false);
+  const [showCompletePrompt, setShowCompletePrompt] = useState(false);
+  const [completedContact, setCompletedContact] = useState(null);
+  const [showNewActivity, setShowNewActivity] = useState(false);
+  const [newNote, setNewNote] = useState("");
+  const [notes, setNotes] = useState([]);
+  const [savingNote, setSavingNote] = useState(false);
+  const [activeTab, setActiveTab] = useState("Notes");
+
+  const handleLogin = async (tok, user) => {
+    setToken(tok);
+    setAuthUser(user);
+    try {
+      const users = await sbFetch(`${API}/users?select=*`, {}, tok);
+      setDbUser(users?.[0]);
+    } catch (e) { console.error(e); }
+  };
+
+  const loadContacts = useCallback(async () => {
+    if (!token) return;
+    try {
+      const data = await sbFetch(`${API}/contacts?select=*&order=created_at.desc`, {}, token);
+      setContacts(data || []);
+      if (data?.length > 0) setSelected(data[0]);
+    } catch (e) { setContacts([]); }
+  }, [token]);
+
+  const loadActivities = useCallback(async () => {
+    if (!token) return;
+    try {
+      const data = await sbFetch(`${API}/activities?select=*&order=due_date.asc`, {}, token);
+      setActivities(data || []);
+    } catch (e) { setActivities([]); }
+  }, [token]);
+
+  const loadNotes = useCallback(async (contactId) => {
+    if (!token || !contactId) return;
+    try {
+      const data = await sbFetch(`${API}/notes?contact_id=eq.${contactId}&select=*&order=created_at.desc`, {}, token);
+      setNotes(data || []);
+    } catch (e) { setNotes([]); }
+  }, [token]);
+
+  useEffect(() => { if (token) { loadContacts(); loadActivities(); } }, [token]);
+  useEffect(() => { if (selected) loadNotes(selected.id); }, [selected?.id]);
+
+  const handleSaveNote = async () => {
+    if (!newNote.trim() || !selected) return;
+    setSavingNote(true);
+    try {
+      const result = await sbFetch(`${API}/notes`, {
+        method: "POST",
+        body: JSON.stringify({ contact_id: selected.id, author_id: dbUser?.id || authUser?.id, body: newNote.trim() })
+      }, token);
+      setNotes(prev => [result[0], ...prev]);
+      setNewNote("");
+    } catch (e) { console.error(e); }
+    finally { setSavingNote(false); }
+  };
+
+  const handleToggleActivity = async (act) => {
+    const newDone = !act.is_completed;
+    setActivities(prev => prev.map(a => a.id === act.id ? { ...a, is_completed: newDone } : a));
+    try {
+      await sbFetch(`${API}/activities?id=eq.${act.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ is_completed: newDone, completed_at: newDone ? new Date().toISOString() : null })
+      }, token);
+      if (newDone) {
+        setCompletedContact(contacts?.find(c => c.id === act.contact_id));
+        setShowCompletePrompt(true);
+      }
+    } catch (e) { console.error(e); }
+  };
+
+  const [newContact, setNewContact] = useState({ first_name: "", last_name: "", phone: "", email: "", address: "", city: "", state: "TX", zip: "", service_type: "Roof Replacement", status: "New Lead", source: "Manual Entry", estimated_value: "" });
+  const [savingContact, setSavingContact] = useState(false);
+
+  const handleSaveContact = async () => {
+    if (!newContact.first_name || !newContact.last_name) return;
+    setSavingContact(true);
+    try {
+      const result = await sbFetch(`${API}/contacts`, {
+        method: "POST",
+        body: JSON.stringify({ ...newContact, estimated_value: parseFloat(newContact.estimated_value) || 0, assigned_rep_id: dbUser?.id || authUser?.id })
+      }, token);
+      setContacts(prev => [result[0], ...(prev || [])]);
+      setSelected(result[0]);
+      setShowNewContact(false);
+      setNewContact({ first_name: "", last_name: "", phone: "", email: "", address: "", city: "", state: "TX", zip: "", service_type: "Roof Replacement", status: "New Lead", source: "Manual Entry", estimated_value: "" });
+    } catch (e) { console.error(e); }
+    finally { setSavingContact(false); }
+  };
+
+  const filtered = (contacts || []).filter(c =>
+    `${c.first_name} ${c.last_name} ${c.service_type || ""}`.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const initials = dbUser?.full_name?.split(" ").map(n => n[0]).join("").slice(0, 2) || "??";
+
+  if (!token) return <LoginScreen onLogin={handleLogin} />;
+
+  const avatarColor = (name) => {
+    const colors = ["#C2562F", "#3D6E5C", "#5B5BA8", "#8A6D3B", "#2E6D8A", "#7A3B69"];
+    return colors[(name?.charCodeAt(0) || 0) % colors.length];
+  };
+
+  return (
+    <div style={{ fontFamily: FB, background: "#EFE9DC", color: C.text, height: "100vh", display: "flex", flexDirection: "column", overflow: "hidden", fontSize: 13 }}>
+      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+
+      {/* TOP BAR */}
+      <header style={{ height: 56, background: C.dark, display: "flex", alignItems: "center", padding: "0 16px", gap: 18, flexShrink: 0, borderBottom: `3px solid ${C.rust}` }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+          <div style={{ width: 32, height: 32, borderRadius: 7, background: C.rust, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <Wrench size={16} color="#fff" strokeWidth={2.5} />
+          </div>
+          <div>
+            <div style={{ fontFamily: FD, fontSize: 15, fontWeight: 700, color: "#F4EFE6" }}>FieldDesk CRM</div>
+            <div style={{ fontSize: 9.5, color: C.muted, textTransform: "uppercase", letterSpacing: 0.5 }}>Roofing · Solar · HVAC</div>
+          </div>
+        </div>
+        <div style={{ flex: 1, maxWidth: 420, display: "flex", alignItems: "center", gap: 8, background: C.mid, borderRadius: 6, padding: "7px 12px" }}>
+          <Search size={14} color={C.sub} />
+          <input value={search} onChange={e => setSearch(e.target.value)}
+            style={{ border: "none", outline: "none", background: "transparent", color: "#F4EFE6", fontSize: 12.5, width: "100%", fontFamily: FB }}
+            placeholder="Search contacts…" />
+        </div>
+        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 }}>
+          <button onClick={() => { loadContacts(); loadActivities(); }} title="Refresh"
+            style={{ background: C.mid, border: "none", borderRadius: 6, width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+            <RefreshCw size={15} color="#C4BCA8" />
+          </button>
+          <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+            <div style={{ width: 28, height: 28, borderRadius: "50%", background: C.rust, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 700 }}>{initials}</div>
+            <div>
+              <div style={{ fontSize: 12, color: "#F4EFE6", fontWeight: 600 }}>{dbUser?.full_name || authUser?.email}</div>
+              <div style={{ fontSize: 9.5, color: C.muted, textTransform: "capitalize" }}>{dbUser?.role || "user"}</div>
+            </div>
+          </div>
+          <button onClick={() => { setToken(null); setAuthUser(null); setDbUser(null); setContacts(null); setActivities(null); }}
+            style={{ background: "none", border: "none", cursor: "pointer", color: C.muted }} title="Sign out">
+            <LogOut size={16} />
+          </button>
+        </div>
+      </header>
+
+      <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
+        {/* SIDEBAR */}
+        <nav style={{ width: 158, background: C.dark, display: "flex", flexDirection: "column", padding: "12px 8px", gap: 1, flexShrink: 0 }}>
+          {[
+            { icon: Users, label: "Contacts", key: "contacts" },
+            { icon: Calendar, label: "Calendar", key: "calendar" },
+            { icon: TrendingUp, label: "Pipeline", key: "pipeline" },
+            { icon: Phone, label: "Call Lists", key: "calls" },
+            { icon: Tag, label: "Price Lists", key: "prices" },
+            { icon: BarChart3, label: "Reports", key: "reports" },
+            { icon: Settings, label: "Admin", key: "admin" },
+          ].map(item => (
+            <button key={item.key} onClick={() => setView(item.key)}
+              style={{ display: "flex", alignItems: "center", gap: 9, padding: "9px 10px", borderRadius: 6, background: view === item.key ? C.rust : "transparent", border: "none", color: view === item.key ? "#fff" : "#C4BCA8", fontSize: 12.5, fontWeight: 500, cursor: "pointer", textAlign: "left", fontFamily: FB }}>
+              <item.icon size={15} strokeWidth={2} />{item.label}
+            </button>
+          ))}
+          <div style={{ flex: 1 }} />
+          <div style={{ padding: "10px", background: C.mid, borderRadius: 8, margin: "0 2px" }}>
+            <div style={{ fontSize: 9.5, color: C.muted, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 7, fontWeight: 600 }}>Your Data</div>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#E5DECB", padding: "3px 0" }}>
+              <span>Contacts</span><strong>{contacts?.length ?? "…"}</strong>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#E5DECB", padding: "3px 0" }}>
+              <span>Activities</span><strong>{activities?.length ?? "…"}</strong>
+            </div>
+          </div>
+        </nav>
+
+        {/* CONTACTS VIEW */}
+        {view === "contacts" && (
+          <>
+            {/* Contact List */}
+            <div style={{ width: 264, background: C.tan, borderRight: `1px solid ${C.border}`, display: "flex", flexDirection: "column", flexShrink: 0 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "13px 12px 9px", fontSize: 11, fontWeight: 700, color: C.sub, textTransform: "uppercase", letterSpacing: 0.5 }}>
+                <span>Contacts ({filtered.length})</span>
+                <button onClick={() => setShowNewContact(true)} style={{ background: C.rust, border: "none", borderRadius: 5, width: 20, height: 20, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", cursor: "pointer" }}><Plus size={13} /></button>
+              </div>
+              <div style={{ flex: 1, overflowY: "auto", padding: "0 7px 12px" }}>
+                {contacts === null ? <Spinner /> : filtered.length === 0 ? (
+                  <div style={{ textAlign: "center", padding: "30px 16px", color: C.muted, fontSize: 12.5 }}>
+                    {(contacts || []).length === 0 ? "No contacts yet. Click + to add your first customer." : "No matches found."}
+                  </div>
+                ) : filtered.map(c => (
+                  <button key={c.id} onClick={() => setSelected(c)}
+                    style={{ width: "100%", display: "flex", gap: 9, padding: "9px 8px", border: "none", background: selected?.id === c.id ? "#fff" : "transparent", borderRadius: 8, cursor: "pointer", textAlign: "left", marginBottom: 2, fontFamily: FB, boxShadow: selected?.id === c.id ? "0 1px 4px rgba(58,53,42,0.1)" : "none" }}>
+                    <div style={{ width: 32, height: 32, borderRadius: "50%", background: avatarColor(c.first_name), color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, flexShrink: 0 }}>{c.first_name?.[0]}{c.last_name?.[0]}</div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 12.5, fontWeight: 700, color: C.text }}>{c.first_name} {c.last_name}</div>
+                      <div style={{ fontSize: 11, color: C.sub, margin: "1px 0 4px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.service_type || "—"}</div>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                        <Pill label={c.status} />
+                        <span style={{ fontSize: 11, fontWeight: 700, color: "#5C5645" }}>${(c.estimated_value || 0).toLocaleString()}</span>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Contact Detail */}
+            {selected ? (
+              <div style={{ flex: 1, background: C.cream, display: "flex", flexDirection: "column", overflowY: "auto", borderRight: `1px solid ${C.border}` }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 13, padding: "18px 22px 14px", borderBottom: `1px solid ${C.border}` }}>
+                  <div style={{ width: 48, height: 48, borderRadius: "50%", background: avatarColor(selected.first_name), color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 700 }}>{selected.first_name?.[0]}{selected.last_name?.[0]}</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+                      <h2 style={{ fontFamily: FD, fontSize: 19, margin: 0, fontWeight: 700, color: C.dark }}>{selected.first_name} {selected.last_name}</h2>
+                      <Pill label={selected.status} />
+                    </div>
+                    <div style={{ fontSize: 11.5, color: C.sub, marginTop: 2 }}>{selected.service_type} · Source: {selected.source}</div>
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <div style={{ fontSize: 9.5, color: C.muted, textTransform: "uppercase", letterSpacing: 0.4, fontWeight: 600 }}>Est. Value</div>
+                    <div style={{ fontFamily: FD, fontSize: 20, fontWeight: 700, color: C.sage }}>${(selected.estimated_value || 0).toLocaleString()}</div>
+                  </div>
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px 22px", padding: "14px 22px" }}>
+                  {[
+                    { icon: Phone, label: "Phone", value: selected.phone || "—" },
+                    { icon: Mail, label: "Email", value: selected.email || "—" },
+                    { icon: MapPin, label: "Address", value: [selected.address, selected.city, selected.state, selected.zip].filter(Boolean).join(", ") || "—" },
+                    { icon: Clock, label: "Added", value: selected.created_at ? new Date(selected.created_at).toLocaleDateString() : "—" },
+                  ].map(({ icon: Icon, label, value }) => (
+                    <div key={label} style={{ display: "flex", gap: 8 }}>
+                      <Icon size={13} color={C.sub} style={{ marginTop: 2, flexShrink: 0 }} />
+                      <div>
+                        <div style={{ fontSize: 9.5, color: C.muted, textTransform: "uppercase", letterSpacing: 0.4, fontWeight: 600 }}>{label}</div>
+                        <div style={{ fontSize: 12.5, color: C.text, fontWeight: 500 }}>{value}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div style={{ display: "flex", gap: 7, padding: "4px 22px 14px", flexWrap: "wrap" }}>
+                  {[
+                    { icon: Phone, label: "Log Call" },
+                    { icon: Mail, label: "Send Email" },
+                    { icon: FileText, label: "New Proposal", primary: true },
+                    { icon: Calendar, label: "Schedule" },
+                  ].map(({ icon: Icon, label, primary }) => (
+                    <Btn key={label} primary={primary}><Icon size={13} />{label}</Btn>
+                  ))}
+                </div>
+
+                <div style={{ display: "flex", gap: 2, padding: "0 22px", borderBottom: `1px solid ${C.border}` }}>
+                  {["Notes", "Documents", "Email History"].map(t => (
+                    <button key={t} onClick={() => setActiveTab(t)} style={{ padding: "9px 12px", border: "none", background: "transparent", fontSize: 12, fontWeight: 600, color: activeTab === t ? C.rust : C.muted, cursor: "pointer", borderBottom: activeTab === t ? `2px solid ${C.rust}` : "2px solid transparent", fontFamily: FB }}>{t}</button>
+                  ))}
+                </div>
+
+                <div style={{ padding: "16px 22px", flex: 1 }}>
+                  {activeTab === "Notes" && (
+                    <div>
+                      <div style={{ background: "#fff", border: `1px solid ${C.border}`, borderRadius: 8, padding: "12px 14px", marginBottom: 14 }}>
+                        <textarea value={newNote} onChange={e => setNewNote(e.target.value)}
+                          placeholder="Type a note about this customer…" rows={3}
+                          style={{ width: "100%", border: "none", outline: "none", fontSize: 12.5, fontFamily: FB, resize: "none", color: C.text, boxSizing: "border-box" }} />
+                        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
+                          <Btn primary onClick={handleSaveNote} disabled={!newNote.trim() || savingNote}>
+                            <Send size={13} />{savingNote ? "Saving…" : "Save Note"}
+                          </Btn>
+                        </div>
+                      </div>
+                      {notes.length === 0 ? (
+                        <div style={{ textAlign: "center", padding: "20px 0", color: C.muted, fontSize: 12.5 }}>No notes yet — add the first one above.</div>
+                      ) : notes.map(n => (
+                        <div key={n.id} style={{ background: "#fff", border: `1px solid ${C.border}`, borderRadius: 8, padding: "11px 13px", marginBottom: 9 }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
+                            <span style={{ fontSize: 11, fontWeight: 700, color: C.sage }}>You</span>
+                            <span style={{ fontSize: 11, color: C.muted }}>{new Date(n.created_at).toLocaleDateString()}</span>
+                          </div>
+                          <div style={{ fontSize: 12.5, color: C.sub, lineHeight: 1.5 }}>{n.body}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {activeTab === "Documents" && (
+                    <div style={{ textAlign: "center", padding: "30px 20px" }}>
+                      <Upload size={28} color={C.border} />
+                      <div style={{ fontSize: 13, fontWeight: 700, color: C.sub, marginTop: 10 }}>No documents yet</div>
+                      <div style={{ fontSize: 11.5, color: C.muted, marginTop: 4 }}>Upload contracts, site photos, inspection reports</div>
+                    </div>
+                  )}
+                  {activeTab === "Email History" && (
+                    <div style={{ textAlign: "center", padding: "30px 20px" }}>
+                      <Mail size={28} color={C.border} />
+                      <div style={{ fontSize: 13, fontWeight: 700, color: C.sub, marginTop: 10 }}>No emails sent yet</div>
+                      <div style={{ fontSize: 11.5, color: C.muted, marginTop: 4 }}>Emails sent from FieldDesk will show open & click tracking here</div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", background: C.cream, flexDirection: "column", gap: 10 }}>
+                <Users size={32} color={C.border} />
+                <div style={{ fontSize: 13, color: C.muted }}>Select a contact to view details</div>
+              </div>
+            )}
+
+            {/* Activity Panel */}
+            <div style={{ width: 248, background: C.tan, display: "flex", flexDirection: "column", flexShrink: 0, padding: "13px 11px" }}>
+              <div style={{ marginBottom: 9 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: C.dark, fontFamily: FD }}>Today's Activities</div>
+                <div style={{ fontSize: 11, color: C.muted, marginTop: 1 }}>{new Date().toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}</div>
+              </div>
+              <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 7 }}>
+                {activities === null ? <Spinner /> : (activities || []).length === 0 ? (
+                  <div style={{ textAlign: "center", padding: "20px 10px", color: C.muted, fontSize: 12 }}>No activities yet.</div>
+                ) : (activities || []).map(a => (
+                  <div key={a.id} style={{ display: "flex", gap: 8, background: "#fff", border: `1px solid ${C.border}`, borderRadius: 8, padding: "9px 10px" }}>
+                    <button onClick={() => handleToggleActivity(a)} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, flexShrink: 0, marginTop: 1 }}>
+                      {a.is_completed ? <CheckCircle2 size={17} color={C.sage} /> : <Circle size={17} color={C.border} />}
+                    </button>
+                    <div>
+                      <div style={{ fontSize: 11.5, fontWeight: 600, lineHeight: 1.4, textDecoration: a.is_completed ? "line-through" : "none", color: a.is_completed ? C.muted : C.text }}>{a.subject}</div>
+                      {a.due_date && <div style={{ fontSize: 10.5, color: C.muted, marginTop: 1 }}>{new Date(a.due_date).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</div>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <button onClick={() => setShowNewActivity(true)}
+                style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: C.dark, color: "#F4EFE6", border: "none", borderRadius: 7, padding: "9px", fontSize: 12, fontWeight: 600, cursor: "pointer", marginTop: 9, fontFamily: FB }}>
+                <Plus size={13} /> New Activity
+              </button>
+              <div style={{ background: "#FBF1DD", border: "1px solid #E8D7A8", borderRadius: 8, padding: "10px 11px", marginTop: 10 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 10.5, fontWeight: 700, color: "#8A6D1F", marginBottom: 4 }}>
+                  <Bell size={12} color={C.gold} /> Auto-Reminders
+                </div>
+                <div style={{ fontSize: 11, color: "#6B5A2A", lineHeight: 1.4 }}>Meeting reminder emails — enabled in Phase 2.</div>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* OTHER VIEWS */}
+        {view !== "contacts" && (
+          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 12 }}>
+            <div style={{ fontSize: 38 }}>{view === "calendar" ? "📅" : view === "pipeline" ? "📈" : view === "calls" ? "📞" : view === "prices" ? "🏷️" : view === "reports" ? "📊" : "⚙️"}</div>
+            <div style={{ fontFamily: FD, fontSize: 18, color: C.dark, textTransform: "capitalize" }}>{view === "prices" ? "Price Lists" : view}</div>
+            <div style={{ fontSize: 12.5, color: C.sub, maxWidth: 300, textAlign: "center" }}>Coming in Phase 2.</div>
+          </div>
+        )}
+      </div>
+
+      {/* NEW CONTACT MODAL */}
+      {showNewContact && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(46,42,33,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }} onClick={() => setShowNewContact(false)}>
+          <div style={{ background: C.cream, borderRadius: 12, width: 460, maxHeight: "90vh", overflowY: "auto", boxShadow: "0 16px 50px rgba(0,0,0,0.28)" }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "15px 20px", borderBottom: `1px solid ${C.border}` }}>
+              <span style={{ fontSize: 14, fontWeight: 700, color: C.dark, fontFamily: FD }}>New Contact</span>
+              <button onClick={() => setShowNewContact(false)} style={{ background: "none", border: "none", cursor: "pointer", color: C.muted }}><X size={16} /></button>
+            </div>
+            <div style={{ padding: "18px 20px", display: "flex", flexDirection: "column", gap: 14 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                {[["First Name", "first_name"], ["Last Name", "last_name"], ["Phone", "phone"], ["Email", "email"], ["Est. Value ($)", "estimated_value"]].map(([label, key]) => (
+                  <Field key={key} label={label}>
+                    <Input value={newContact[key]} onChange={e => setNewContact(p => ({ ...p, [key]: e.target.value }))} />
+                  </Field>
+                ))}
+                <Field label="Status">
+                  <select value={newContact.status} onChange={e => setNewContact(p => ({ ...p, status: e.target.value }))} style={{ width: "100%", padding: "8px 10px", border: `1px solid ${C.border}`, borderRadius: 6, fontSize: 12.5, fontFamily: FB, background: "#fff" }}>
+                    {Object.keys(STATUS_COLORS).map(s => <option key={s}>{s}</option>)}
+                  </select>
+                </Field>
+              </div>
+              <Field label="Address"><Input value={newContact.address} onChange={e => setNewContact(p => ({ ...p, address: e.target.value }))} /></Field>
+              <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: 12 }}>
+                <Field label="City"><Input value={newContact.city} onChange={e => setNewContact(p => ({ ...p, city: e.target.value }))} /></Field>
+                <Field label="State"><Input value={newContact.state} onChange={e => setNewContact(p => ({ ...p, state: e.target.value }))} /></Field>
+                <Field label="ZIP"><Input value={newContact.zip} onChange={e => setNewContact(p => ({ ...p, zip: e.target.value }))} /></Field>
+              </div>
+              <Field label="Service Type">
+                <select value={newContact.service_type} onChange={e => setNewContact(p => ({ ...p, service_type: e.target.value }))} style={{ width: "100%", padding: "8px 10px", border: `1px solid ${C.border}`, borderRadius: 6, fontSize: 12.5, fontFamily: FB, background: "#fff" }}>
+                  {SERVICE_TYPES.map(s => <option key={s}>{s}</option>)}
+                </select>
+              </Field>
+              <Field label="Lead Source">
+                <select value={newContact.source} onChange={e => setNewContact(p => ({ ...p, source: e.target.value }))} style={{ width: "100%", padding: "8px 10px", border: `1px solid ${C.border}`, borderRadius: 6, fontSize: 12.5, fontFamily: FB, background: "#fff" }}>
+                  {["Manual Entry", "Website Form", "Facebook Ad", "Referral", "Door Knock", "Other"].map(s => <option key={s}>{s}</option>)}
+                </select>
+              </Field>
+            </div>
+            <div style={{ padding: "8px 20px 20px", display: "flex", gap: 10 }}>
+              <Btn primary onClick={handleSaveContact} disabled={savingContact || !newContact.first_name || !newContact.last_name} style={{ flex: 1, justifyContent: "center" }}>
+                <Save size={13} />{savingContact ? "Saving…" : "Save Contact"}
+              </Btn>
+              <Btn onClick={() => setShowNewContact(false)} style={{ flex: 1, justifyContent: "center" }}>Cancel</Btn>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* COMPLETE ACTIVITY PROMPT */}
+      {showCompletePrompt && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(46,42,33,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }} onClick={() => setShowCompletePrompt(false)}>
+          <div style={{ background: C.cream, borderRadius: 12, width: 340, boxShadow: "0 16px 50px rgba(0,0,0,0.28)", textAlign: "center" }} onClick={e => e.stopPropagation()}>
+            <div style={{ padding: "28px 24px" }}>
+              <CheckCircle2 size={36} color={C.sage} style={{ marginBottom: 12 }} />
+              <div style={{ fontSize: 15, fontWeight: 700, color: C.dark, marginBottom: 6, fontFamily: FD }}>Activity Complete!</div>
+              <div style={{ fontSize: 12.5, color: C.sub, marginBottom: 22 }}>Great work! Want to schedule the next step{completedContact ? ` with ${completedContact.first_name}` : ""}?</div>
+              <div style={{ display: "flex", gap: 10 }}>
+                <Btn primary onClick={() => { setShowCompletePrompt(false); setShowNewActivity(true); }} style={{ flex: 1, justifyContent: "center" }}>Schedule Next Activity</Btn>
+                <Btn onClick={() => setShowCompletePrompt(false)} style={{ flex: 1, justifyContent: "center" }}>Not Now</Btn>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* NEW ACTIVITY MODAL */}
+      {showNewActivity && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(46,42,33,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }} onClick={() => setShowNewActivity(false)}>
+          <div style={{ background: C.cream, borderRadius: 12, width: 400, boxShadow: "0 16px 50px rgba(0,0,0,0.28)" }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "15px 20px", borderBottom: `1px solid ${C.border}` }}>
+              <span style={{ fontSize: 14, fontWeight: 700, color: C.dark, fontFamily: FD }}>New Activity</span>
+              <button onClick={() => setShowNewActivity(false)} style={{ background: "none", border: "none", cursor: "pointer", color: C.muted }}><X size={16} /></button>
+            </div>
+            <NewActivityForm token={token} userId={dbUser?.id || authUser?.id} contactId={selected?.id}
+              onSave={(a) => { setActivities(prev => [a, ...(prev || [])]); setShowNewActivity(false); }}
+              onClose={() => setShowNewActivity(false)} />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function NewActivityForm({ token, userId, contactId, onSave, onClose }) {
+  const [form, setForm] = useState({ type: "call", subject: "", due_date: "" });
+  const [saving, setSaving] = useState(false);
+  const set = k => e => setForm(f => ({ ...f, [k]: e.target.value }));
+
+  const handleSave = async () => {
+    if (!form.subject) return;
+    setSaving(true);
+    try {
+      const result = await sbFetch(`${API}/activities`, {
+        method: "POST",
+        body: JSON.stringify({ ...form, contact_id: contactId, assigned_user_id: userId }),
+      }, token);
+      onSave(result[0]);
+    } catch (e) { console.error(e); }
+    finally { setSaving(false); }
+  };
+
+  return (
+    <div>
+      <div style={{ padding: "18px 20px", display: "flex", flexDirection: "column", gap: 14 }}>
+        <Field label="Type">
+          <select value={form.type} onChange={set("type")} style={{ width: "100%", padding: "8px 10px", border: `1px solid ${C.border}`, borderRadius: 6, fontSize: 12.5, fontFamily: FB, background: "#fff" }}>
+            {["call", "meeting", "task", "email"].map(t => <option key={t}>{t}</option>)}
+          </select>
+        </Field>
+        <Field label="Subject *">
+          <Input value={form.subject} onChange={set("subject")} placeholder="e.g. Follow-up call about proposal" />
+        </Field>
+        <Field label="Due Date & Time">
+          <Input value={form.due_date} onChange={set("due_date")} type="datetime-local" />
+        </Field>
+      </div>
+      <div style={{ padding: "8px 20px 20px", display: "flex", gap: 10 }}>
+        <Btn primary onClick={handleSave} disabled={saving || !form.subject} style={{ flex: 1, justifyContent: "center" }}>
+          {saving ? "Saving…" : "Schedule Activity"}
+        </Btn>
+        <Btn onClick={onClose} style={{ flex: 1, justifyContent: "center" }}>Cancel</Btn>
+      </div>
+    </div>
+  );
+}
