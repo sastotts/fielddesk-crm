@@ -1283,6 +1283,11 @@ function GutterProposalModal({contact, dbUser, onSave, onClose}){
   const [diagramData, setDiagramData] = React.useState(null);
   const [manualPrice, setManualPrice] = React.useState("");
   const [useManualPrice, setUseManualPrice] = React.useState(false);
+  const [gutterFt, setGutterFt] = React.useState("");
+  const [downspouts, setDownspouts] = React.useState("");
+  const gutterPrice = (parseFloat(gutterFt)||0) * 7.5;
+  const dsPrice = (parseFloat(downspouts)||0) * 13 * 7.5;
+  const totalPrice = gutterPrice + dsPrice;
   const finalPrice = useManualPrice && manualPrice ? parseFloat(manualPrice)||0 : totalPrice;
   const s = k => e => setForm(p=>({...p,[k]:e.target.value}));
 
@@ -1313,13 +1318,6 @@ function GutterProposalModal({contact, dbUser, onSave, onClose}){
     setEmailSent(true);
     setTimeout(()=>setEmailSent(false), 3000);
   };
-
-  // Live pricing state
-  const [gutterFt, setGutterFt] = React.useState("");
-  const [downspouts, setDownspouts] = React.useState("");
-  const gutterPrice = (parseFloat(gutterFt)||0) * 7.5;
-  const dsPrice = (parseFloat(downspouts)||0) * 13 * 7.5;
-  const totalPrice = gutterPrice + dsPrice;
 
   const MeasField = ({label, field, important}) => (
     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 12px",background:important?"#FFF9EC":"#fff",borderBottom:`1px solid ${C.border}`}}>
@@ -1673,21 +1671,16 @@ function PrintableProposal({contact, form, gutterFt, downspouts, gutterPrice, ds
       </body>
       </html>
     `;
+    // Download as HTML file - works in all browsers including DuckDuckGo
     const blob = new Blob([htmlContent], {type: "text/html"});
     const url = URL.createObjectURL(blob);
-    const newTab = window.open(url, "_blank");
-    if(newTab){
-      newTab.onload = () => {
-        setTimeout(()=>{ newTab.print(); }, 300);
-      };
-    } else {
-      // Fallback: download as HTML file
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `Proposal-${contact.first_name}-${contact.last_name}.html`;
-      a.click();
-    }
-    setTimeout(()=>URL.revokeObjectURL(url), 10000);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `SS-Proposal-${contact.first_name}-${contact.last_name}.html`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(()=>URL.revokeObjectURL(url), 5000);
   };
 
   return(
@@ -1700,7 +1693,7 @@ function PrintableProposal({contact, form, gutterFt, downspouts, gutterPrice, ds
           <div style={{display:"flex",gap:10}}>
             <button onClick={printProposal}
               style={{background:C.rust,color:"#fff",border:"none",borderRadius:7,padding:"8px 16px",fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:6}}>
-              🖨️ Print / Save as PDF (opens new tab)
+              📥 Download Proposal (PDF)
             </button>
             <button onClick={onClose} style={{background:"rgba(255,255,255,0.15)",border:"none",borderRadius:7,padding:"8px 14px",fontSize:13,fontWeight:700,color:"#fff",cursor:"pointer"}}>Close</button>
           </div>
