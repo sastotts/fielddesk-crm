@@ -1528,8 +1528,14 @@ function PrintableProposal({contact, form, gutterFt, downspouts, gutterPrice, ds
   const today = new Date().toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"});
 
   const printProposal = () => {
-    const printWin = window.open("","_blank","width=800,height=1000");
-    printWin.document.write(`
+    // Use iframe instead of window.open to avoid popup blockers
+    const existingFrame = document.getElementById("printFrame");
+    if(existingFrame) existingFrame.remove();
+    const iframe = document.createElement("iframe");
+    iframe.id = "printFrame";
+    iframe.style.cssText = "position:fixed;top:-9999px;left:-9999px;width:800px;height:1000px;";
+    document.body.appendChild(iframe);
+    iframe.contentDocument.write(`
       <!DOCTYPE html>
       <html>
       <head>
@@ -1674,9 +1680,11 @@ function PrintableProposal({contact, form, gutterFt, downspouts, gutterPrice, ds
       </body>
       </html>
     `);
-    printWin.document.close();
-    printWin.focus();
-    setTimeout(()=>printWin.print(), 500);
+    iframe.contentDocument.close();
+    setTimeout(()=>{
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+    }, 500);
   };
 
   return(
@@ -1831,6 +1839,7 @@ function PrintableProposal({contact, form, gutterFt, downspouts, gutterPrice, ds
 // ── Proposals Tab ─────────────────────────────────────────────────
 function ProposalsTab({contactId, onNew}){
   const [proposals, setProposals] = React.useState(null);
+  const [viewingProposal, setViewingProposal] = React.useState(null);
 
   React.useEffect(()=>{
     sb.from("proposals").select("*").eq("contact_id", contactId).order("created_at",{ascending:false})
@@ -1853,7 +1862,10 @@ function ProposalsTab({contactId, onNew}){
           <div style={{fontSize:11.5,marginTop:4}}>Click "+ New Gutter Proposal" to create one</div>
         </div>
       ) : proposals.map(p=>(
-        <div key={p.id} style={{background:"#fff",border:`1px solid ${C.border}`,borderRadius:8,padding:"12px 14px",marginBottom:8}}>
+        <div key={p.id} onClick={()=>setViewingProposal(p)}
+          style={{background:"#fff",border:`1px solid ${C.border}`,borderRadius:8,padding:"12px 14px",marginBottom:8,cursor:"pointer"}}
+          onMouseEnter={e=>e.currentTarget.style.boxShadow="0 2px 8px rgba(0,0,0,0.1)"}
+          onMouseLeave={e=>e.currentTarget.style.boxShadow="none"}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
             <div style={{display:"flex",alignItems:"center",gap:8}}>
               <span style={{fontSize:18}}>{statusIcon(p.status)}</span>
@@ -1867,8 +1879,52 @@ function ProposalsTab({contactId, onNew}){
               <span style={{fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:10,background:statusColor(p.status)+"22",color:statusColor(p.status)}}>{p.status}</span>
             </div>
           </div>
+          <div style={{fontSize:11,color:C.muted,marginTop:4}}>👆 Click to view details</div>
         </div>
       ))}
+      
+      {/* Proposal detail modal */}
+      {viewingProposal&&(
+        <div style={{position:"fixed",inset:0,background:"rgba(46,42,33,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:100,padding:16}} onClick={()=>setViewingProposal(null)}>
+          <div style={{background:C.cream,borderRadius:12,width:420,boxShadow:"0 16px 50px rgba(0,0,0,0.28)"}} onClick={e=>e.stopPropagation()}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"15px 20px",borderBottom:`1px solid ${C.border}`}}>
+              <span style={{fontSize:14,fontWeight:700,color:C.dark}}>📋 Proposal Details</span>
+              <button onClick={()=>setViewingProposal(null)} style={{background:"none",border:"none",cursor:"pointer",fontSize:18,color:C.muted}}>✕</button>
+            </div>
+            <div style={{padding:"20px"}}>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:16}}>
+                <div style={{background:C.tan,borderRadius:8,padding:"10px 12px"}}>
+                  <div style={{fontSize:9.5,color:C.muted,textTransform:"uppercase",letterSpacing:0.4,fontWeight:600,marginBottom:4}}>Date</div>
+                  <div style={{fontSize:13,fontWeight:700,color:C.dark}}>{new Date(viewingProposal.created_at).toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"})}</div>
+                </div>
+                <div style={{background:C.tan,borderRadius:8,padding:"10px 12px"}}>
+                  <div style={{fontSize:9.5,color:C.muted,textTransform:"uppercase",letterSpacing:0.4,fontWeight:600,marginBottom:4}}>Status</div>
+                  <div style={{fontSize:13,fontWeight:700,color:statusColor(viewingProposal.status)}}>{statusIcon(viewingProposal.status)} {viewingProposal.status}</div>
+                </div>
+              </div>
+              <div style={{background:C.dark,borderRadius:10,padding:"14px 16px",marginBottom:16,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <span style={{fontSize:14,fontWeight:700,color:"#fff"}}>Total Amount</span>
+                <span style={{fontSize:22,fontWeight:800,color:"#7FFFD4"}}>${(viewingProposal.total_amount||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
+              </div>
+              <div style={{display:"flex",gap:10}}>
+                <Btn primary onClick={async()=>{
+                  await sb.from("proposals").update({status:"Signed"}).eq("id",viewingProposal.id);
+                  setProposals(p=>p.map(x=>x.id===viewingProposal.id?{...x,status:"Signed"}:x));
+                  setViewingProposal(null);
+                }} style={{flex:1,justifyContent:"center"}} disabled={viewingProposal.status==="Signed"}>
+                  {viewingProposal.status==="Signed"?"✅ Already Signed":"✍️ Mark as Signed"}
+                </Btn>
+                <Btn danger onClick={async()=>{
+                  await sb.from("proposals").delete().eq("id",viewingProposal.id);
+                  setProposals(p=>p.filter(x=>x.id!==viewingProposal.id));
+                  setViewingProposal(null);
+                }} style={{justifyContent:"center"}}>🗑️</Btn>
+                <Btn onClick={()=>setViewingProposal(null)} style={{justifyContent:"center"}}>Close</Btn>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
