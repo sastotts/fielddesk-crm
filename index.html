@@ -1528,14 +1528,7 @@ function PrintableProposal({contact, form, gutterFt, downspouts, gutterPrice, ds
   const today = new Date().toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"});
 
   const printProposal = () => {
-    // Use iframe instead of window.open to avoid popup blockers
-    const existingFrame = document.getElementById("printFrame");
-    if(existingFrame) existingFrame.remove();
-    const iframe = document.createElement("iframe");
-    iframe.id = "printFrame";
-    iframe.style.cssText = "position:fixed;top:-9999px;left:-9999px;width:800px;height:1000px;";
-    document.body.appendChild(iframe);
-    iframe.contentDocument.write(`
+    const htmlContent = `
       <!DOCTYPE html>
       <html>
       <head>
@@ -1680,11 +1673,22 @@ function PrintableProposal({contact, form, gutterFt, downspouts, gutterPrice, ds
       </body>
       </html>
     `);
-    iframe.contentDocument.close();
-    setTimeout(()=>{
-      iframe.contentWindow.focus();
-      iframe.contentWindow.print();
-    }, 500);
+    `;
+    const blob = new Blob([htmlContent], {type: "text/html"});
+    const url = URL.createObjectURL(blob);
+    const newTab = window.open(url, "_blank");
+    if(newTab){
+      newTab.onload = () => {
+        setTimeout(()=>{ newTab.print(); }, 300);
+      };
+    } else {
+      // Fallback: download as HTML file
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Proposal-${contact.first_name}-${contact.last_name}.html`;
+      a.click();
+    }
+    setTimeout(()=>URL.revokeObjectURL(url), 10000);
   };
 
   return(
@@ -1697,7 +1701,7 @@ function PrintableProposal({contact, form, gutterFt, downspouts, gutterPrice, ds
           <div style={{display:"flex",gap:10}}>
             <button onClick={printProposal}
               style={{background:C.rust,color:"#fff",border:"none",borderRadius:7,padding:"8px 16px",fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:6}}>
-              🖨️ Print / Save as PDF
+              🖨️ Print / Save as PDF (opens new tab)
             </button>
             <button onClick={onClose} style={{background:"rgba(255,255,255,0.15)",border:"none",borderRadius:7,padding:"8px 14px",fontSize:13,fontWeight:700,color:"#fff",cursor:"pointer"}}>Close</button>
           </div>
