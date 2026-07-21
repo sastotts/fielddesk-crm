@@ -40,7 +40,7 @@ const C = {
 };
 const STATUS_COLORS={"New Lead":C.sub,"Hot Lead":C.rust,"Follow Up":C.indigo,"Proposal Sent":C.gold,"Won":C.sage,"Lost":"#999"};
 const STATUSES=["New Lead","Hot Lead","Follow Up","Proposal Sent","Won","Lost"];
-const SERVICE_TYPES=["Roof Replacement","Roof Repair","Solar Install","HVAC Replacement","HVAC Repair","Gutter Install","Other"];
+const SERVICE_TYPES=["Roof Replacement","Roof Repair","Gutter Install","Gutter Repair","Outdoor Living","Storm Damage Project","Solar (Storm/Project)","HVAC (Storm/Project)","Other"];
 const SOURCES=["Manual Entry","Website Form","Facebook Ad","Referral","Door Knock","Other"];
 const SS_LOGO = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj4KICA8IS0tIFJvb2YgLS0+CiAgPHBvbHlsaW5lIHBvaW50cz0iNSw0NSA1MCw4IDk1LDQ1IiBzdHJva2U9IiM0MTY5RTEiIHN0cm9rZS13aWR0aD0iOSIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+CiAgPCEtLSBMZWZ0IFMgLS0+CiAgPHBhdGggZD0iTTE4LDU4IFExOCw1MCAyNiw1MCBRMzQsNTAgMzQsNTggUTM0LDY1IDI2LDY1IFExOCw2NSAxOCw3MiBRMTgsODAgMjYsODAgUTM0LDgwIDM0LDcyIiBzdHJva2U9IiM0MTY5RTEiIHN0cm9rZS13aWR0aD0iNyIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CiAgPCEtLSBSaWdodCBTIC0tPgogIDxwYXRoIGQ9Ik00MCw1OCBRNDAsNTAgNDgsNTAgUTU2LDUwIDU2LDU4IFE1Niw2NSA0OCw2NSBRNDAsNjUgNDAsNzIgUTQwLDgwIDQ4LDgwIFE1Niw4MCA1Niw3MiIgc3Ryb2tlPSIjNDE2OUUxIiBzdHJva2Utd2lkdGg9IjciIGZpbGw9Im5vbmUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgo8L3N2Zz4=";
 const MONTHS_SHORT=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -881,7 +881,7 @@ function PipelineView({contacts,users,dbUser,onSelectContact}){
             {/* Pipeline type toggle */}
             <div style={{display:"flex",borderRadius:8,overflow:"hidden",border:`1px solid ${C.border}`}}>
               <button onClick={()=>setPipelineType("roofing")} style={{padding:"7px 14px",border:"none",background:pipelineType==="roofing"?C.rust:"#fff",color:pipelineType==="roofing"?"#fff":C.sub,fontWeight:700,fontSize:12,cursor:"pointer"}}>🏠 Roofing</button>
-              <button onClick={()=>setPipelineType("standard")} style={{padding:"7px 14px",border:"none",borderLeft:`1px solid ${C.border}`,background:pipelineType==="standard"?C.rust:"#fff",color:pipelineType==="standard"?"#fff":C.sub,fontWeight:700,fontSize:12,cursor:"pointer"}}>⚡ Solar / HVAC / Gutters</button>
+              <button onClick={()=>setPipelineType("standard")} style={{padding:"7px 14px",border:"none",borderLeft:`1px solid ${C.border}`,background:pipelineType==="standard"?C.rust:"#fff",color:pipelineType==="standard"?"#fff":C.sub,fontWeight:700,fontSize:12,cursor:"pointer"}}>🏡 Gutters / Outdoor Living</button>
             </div>
             {/* Rep filter */}
             <select value={repFilter} onChange={e=>setRepFilter(e.target.value)}
@@ -1578,7 +1578,7 @@ function PrintableProposal({contact, form, gutterFt, downspouts, gutterPrice, ds
               <img src={SS_LOGO} alt="SS Logo" style={{width:70,height:70,objectFit:"cover",borderRadius:8,background:"#F4EFE6"}}/>
               <div>
                 <div style={{fontSize:16,fontWeight:800,color:C.dark}}>S&S Contracting Company LLC</div>
-                <div style={{fontSize:10.5,color:C.muted,textTransform:"uppercase",letterSpacing:0.5,marginTop:2}}>Roofing · Solar · HVAC · Gutters · Gutters</div>
+                <div style={{fontSize:10.5,color:C.muted,textTransform:"uppercase",letterSpacing:0.5,marginTop:2}}>Roofing · Gutters · Outdoor Living · Gutters</div>
               </div>
             </div>
             <div style={{textAlign:"right"}}>
@@ -1860,7 +1860,7 @@ function EmailModal({contact, dbUser, onClose}){
 
 Thank you for taking the time to speak with me today about your home improvement needs. 
 
-At S&S Contracting Company LLC, we specialize in Roofing, Gutters, Solar, and HVAC services and would love the opportunity to earn your business.
+At S&S Contracting Company LLC, we specialize in Roofing, Gutters, and Outdoor Living services and would love the opportunity to earn your business.
 
 I'd be happy to schedule a free inspection and estimate at your convenience. Please feel free to reach out anytime!
 
@@ -2187,7 +2187,7 @@ function Login({onLogin}){
           <img src={SS_LOGO} alt="SS Logo" style={{width:44,height:44,borderRadius:9,objectFit:"cover",background:"#F4EFE6"}}/>
           <div>
             <div style={{fontSize:18,fontWeight:700,color:C.dark}}>S&S Contracting</div>
-            <div style={{fontSize:10,color:C.muted,textTransform:"uppercase",letterSpacing:0.5}}>Roofing · Solar · HVAC · Gutters</div>
+            <div style={{fontSize:10,color:C.muted,textTransform:"uppercase",letterSpacing:0.5}}>Roofing · Gutters · Outdoor Living</div>
           </div>
         </div>
         <ErrBox msg={err}/>
@@ -2304,7 +2304,7 @@ function App(){
           <img src={SS_LOGO} alt="SS Logo" style={{width:36,height:36,borderRadius:7,objectFit:"cover",background:"#F4EFE6"}}/>
           <div>
             <div style={{fontSize:15,fontWeight:700,color:"#F4EFE6"}}>S&S Contracting</div>
-            <div style={{fontSize:9.5,color:C.muted,textTransform:"uppercase",letterSpacing:0.5}}>Roofing · Solar · HVAC · Gutters</div>
+            <div style={{fontSize:9.5,color:C.muted,textTransform:"uppercase",letterSpacing:0.5}}>Roofing · Gutters · Outdoor Living</div>
           </div>
         </div>
         <div style={{flex:1,maxWidth:420,display:"flex",alignItems:"center",gap:8,background:C.mid,borderRadius:6,padding:"7px 12px"}}>
