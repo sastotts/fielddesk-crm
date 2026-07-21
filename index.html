@@ -1309,6 +1309,25 @@ function GutterProposalModal({contact, dbUser, onSave, onClose}){
         created_by: dbUser?.id,
         status: signature ? "Signed" : "Draft",
         total_amount: finalPrice,
+        proposal_data: JSON.parse(JSON.stringify({
+          gutter_ft: gutterFt||"",
+          downspouts: downspouts||"",
+          punchouts: form.punchouts||"",
+          a_elbows: form.a_elbows||"",
+          b_elbows: form.b_elbows||"",
+          left_caps: form.left_caps||"",
+          right_caps: form.right_caps||"",
+          inside_miters: form.inside_miters||"",
+          outside_miters: form.outside_miters||"",
+          splash_shields: form.splash_shields||"",
+          notes: form.notes||"",
+          signature: signature||null,
+          diagram: diagramData||null,
+          rep_name: repName||"",
+          rep_phone: repPhone||"",
+          use_manual_price: useManualPrice||false,
+          manual_price: manualPrice||"",
+        }))
       };
       const {data, error} = await sb.from("proposals").insert(proposalData).select().single();
       if(error){ console.error("Proposal save error:", error); alert("Could not save: " + error.message); setSaving(false); return; }
@@ -1684,9 +1703,10 @@ function PrintableProposal({contact, form, gutterFt, downspouts, gutterPrice, ds
 
 
 // ── Proposals Tab ─────────────────────────────────────────────────
-function ProposalsTab({contactId, onNew}){
+function ProposalsTab({contactId, contact, onNew, dbUser}){
   const [proposals, setProposals] = React.useState(null);
   const [viewingProposal, setViewingProposal] = React.useState(null);
+  const [showFullPreview, setShowFullPreview] = React.useState(false);
 
   React.useEffect(()=>{
     sb.from("proposals").select("*").eq("contact_id", contactId).order("created_at",{ascending:false})
@@ -1753,13 +1773,18 @@ function ProposalsTab({contactId, onNew}){
                 <span style={{fontSize:14,fontWeight:700,color:"#fff"}}>Total Amount</span>
                 <span style={{fontSize:22,fontWeight:800,color:"#7FFFD4"}}>${(viewingProposal.total_amount||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
               </div>
-              <div style={{display:"flex",gap:10}}>
-                <Btn primary onClick={async()=>{
+              <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                {viewingProposal.proposal_data&&(
+                  <Btn primary onClick={()=>setShowFullPreview(true)} style={{flex:1,justifyContent:"center"}}>
+                    📄 View Full Proposal
+                  </Btn>
+                )}
+                <Btn onClick={async()=>{
                   await sb.from("proposals").update({status:"Signed"}).eq("id",viewingProposal.id);
                   setProposals(p=>p.map(x=>x.id===viewingProposal.id?{...x,status:"Signed"}:x));
-                  setViewingProposal(null);
+                  setViewingProposal(p=>({...p,status:"Signed"}));
                 }} style={{flex:1,justifyContent:"center"}} disabled={viewingProposal.status==="Signed"}>
-                  {viewingProposal.status==="Signed"?"✅ Already Signed":"✍️ Mark as Signed"}
+                  {viewingProposal.status==="Signed"?"✅ Signed":"✍️ Mark Signed"}
                 </Btn>
                 <Btn danger onClick={async()=>{
                   await sb.from("proposals").delete().eq("id",viewingProposal.id);
@@ -1768,6 +1793,24 @@ function ProposalsTab({contactId, onNew}){
                 }} style={{justifyContent:"center"}}>🗑️</Btn>
                 <Btn onClick={()=>setViewingProposal(null)} style={{justifyContent:"center"}}>Close</Btn>
               </div>
+              
+              {/* Full proposal preview */}
+              {showFullPreview&&viewingProposal.proposal_data&&(
+                <PrintableProposal
+                  contact={contact}
+                  form={viewingProposal.proposal_data}
+                  gutterFt={viewingProposal.proposal_data.gutter_ft}
+                  downspouts={viewingProposal.proposal_data.downspouts}
+                  gutterPrice={(parseFloat(viewingProposal.proposal_data.gutter_ft)||0)*7.5}
+                  dsPrice={(parseFloat(viewingProposal.proposal_data.downspouts)||0)*13*7.5}
+                  totalPrice={viewingProposal.total_amount}
+                  useManualPrice={viewingProposal.proposal_data.use_manual_price}
+                  diagramData={viewingProposal.proposal_data.diagram}
+                  signature={viewingProposal.proposal_data.signature}
+                  repName={viewingProposal.proposal_data.rep_name}
+                  repPhone={viewingProposal.proposal_data.rep_phone}
+                  onClose={()=>setShowFullPreview(false)}/>
+              )}
             </div>
           </div>
         </div>
@@ -2241,7 +2284,7 @@ function App(){
                     }
                   </div>
                 )}
-                {activeTab==="Proposals"&&<ProposalsTab contactId={selected.id} token={session?.access_token} onNew={()=>setShowGutterProposal(true)}/>}
+                {activeTab==="Proposals"&&<ProposalsTab contactId={selected.id} contact={selected} dbUser={dbUser} onNew={()=>setShowGutterProposal(true)}/>}
                 {activeTab==="Documents"&&<div style={{textAlign:"center",padding:"30px 20px",color:C.muted}}>📁<br/><br/>No documents yet.<br/>Upload contracts, photos &amp; reports — Phase 2.</div>}
                 {activeTab==="Email History"&&<div style={{textAlign:"center",padding:"30px 20px",color:C.muted}}>✉️<br/><br/>Email tracking comes in Phase 2.</div>}
               </div>
