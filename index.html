@@ -1859,22 +1859,13 @@ function EmailHistoryTab({contactId}){
 
 // ── Email Modal ───────────────────────────────────────────────────
 async function sendEmailViaResend({to, toName, subject, html, text}){
-  const response = await fetch("https://api.resend.com/emails", {
+  const response = await fetch("/.netlify/functions/send-email", {
     method: "POST",
-    headers: {
-      "Authorization": `Bearer ${RESEND_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from: FROM_EMAIL,
-      to: [`${toName} <${to}>`],
-      subject,
-      html: html || `<p>${text.replace(/\n/g,"<br/>")}</p>`,
-      text,
-    }),
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({to, toName, subject, html, text}),
   });
   const data = await response.json();
-  if(!response.ok) throw new Error(data.message||"Failed to send");
+  if(!response.ok) throw new Error(data.error||"Failed to send");
   return data;
 }
 
