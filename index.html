@@ -8,6 +8,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
   <style>
     *{margin:0;padding:0;box-sizing:border-box;}
     body{font-family:-apple-system,'Inter',sans-serif;background:#2E2A21;}
@@ -42,8 +43,9 @@ const STATUS_COLORS={"New Lead":C.sub,"Hot Lead":C.rust,"Follow Up":C.indigo,"Pr
 const STATUSES=["New Lead","Hot Lead","Follow Up","Proposal Sent","Won","Lost"];
 const SERVICE_TYPES=["Roof Replacement","Roof Repair","Gutter Install","Gutter Repair","Outdoor Living","Storm Damage Project","Solar (Storm/Project)","HVAC (Storm/Project)","Other"];
 const SOURCES=["Manual Entry","Website Form","Facebook Ad","Referral","Door Knock","Other"];
-const RESEND_API_KEY = "re_RfDTLy5s_MryQsx4xygE6chKwFLH4jmNW";
-const FROM_EMAIL = "S&S Contracting <onboarding@resend.dev>";
+const EMAILJS_SERVICE_ID = "service_bk0sofl";
+const EMAILJS_TEMPLATE_ID = "template_1c7tnro";
+const EMAILJS_PUBLIC_KEY = "p7gS6kLQdHLdyi0Xd";
 const SS_LOGO = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj4KICA8IS0tIFJvb2YgLS0+CiAgPHBvbHlsaW5lIHBvaW50cz0iNSw0NSA1MCw4IDk1LDQ1IiBzdHJva2U9IiM0MTY5RTEiIHN0cm9rZS13aWR0aD0iOSIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+CiAgPCEtLSBMZWZ0IFMgLS0+CiAgPHBhdGggZD0iTTE4LDU4IFExOCw1MCAyNiw1MCBRMzQsNTAgMzQsNTggUTM0LDY1IDI2LDY1IFExOCw2NSAxOCw3MiBRMTgsODAgMjYsODAgUTM0LDgwIDM0LDcyIiBzdHJva2U9IiM0MTY5RTEiIHN0cm9rZS13aWR0aD0iNyIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CiAgPCEtLSBSaWdodCBTIC0tPgogIDxwYXRoIGQ9Ik00MCw1OCBRNDAsNTAgNDgsNTAgUTU2LDUwIDU2LDU4IFE1Niw2NSA0OCw2NSBRNDAsNjUgNDAsNzIgUTQwLDgwIDQ4LDgwIFE1Niw4MCA1Niw3MiIgc3Ryb2tlPSIjNDE2OUUxIiBzdHJva2Utd2lkdGg9IjciIGZpbGw9Im5vbmUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgo8L3N2Zz4=";
 const MONTHS_SHORT=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 const MONTHS_LONG=["January","February","March","April","May","June","July","August","September","October","November","December"];
@@ -1859,14 +1861,21 @@ function EmailHistoryTab({contactId}){
 
 // ── Email Modal ───────────────────────────────────────────────────
 async function sendEmailViaResend({to, toName, subject, html, text}){
-  const response = await fetch("/.netlify/functions/send-email", {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({to, toName, subject, html, text}),
-  });
-  const data = await response.json();
-  if(!response.ok) throw new Error(data.error||"Failed to send");
-  return data;
+  emailjs.init(EMAILJS_PUBLIC_KEY);
+  const result = await emailjs.send(
+    EMAILJS_SERVICE_ID,
+    EMAILJS_TEMPLATE_ID,
+    {
+      to_name: toName,
+      to_email: to,
+      subject: subject,
+      message: text,
+      from_name: "S&S Contracting Company LLC",
+      reply_to: "info@sandscontractingco.com",
+    }
+  );
+  if(result.status !== 200) throw new Error("Failed to send email");
+  return result;
 }
 
 function EmailModal({contact, dbUser, onClose}){
