@@ -401,12 +401,22 @@ function NewContactModal({userId,users,onSave,onClose}){
   const [f,setF]=React.useState({first_name:"",last_name:"",phone:"",email:"",address:"",city:"",state:"TX",zip:"",service_type:"Roof Replacement",status:"New Lead",source:"Manual Entry",estimated_value:"",assigned_rep_id:userId});
   const [saving,setSaving]=React.useState(false);
   const [err,setErr]=React.useState("");
+  const [housePhoto,setHousePhoto]=React.useState(null);
+  const photoRef=React.useRef(null);
   const s=k=>e=>setF(p=>({...p,[k]:e.target.value}));
+
+  const handlePhotoCapture=(e)=>{
+    const file=e.target.files[0];
+    if(!file)return;
+    const reader=new FileReader();
+    reader.onload=ev=>setHousePhoto(ev.target.result);
+    reader.readAsDataURL(file);
+  };
 
   const save=async()=>{
     if(!f.first_name||!f.last_name){setErr("First and last name are required.");return;}
     setSaving(true);setErr("");
-    const {data,error}=await sb.from("contacts").insert({...f,estimated_value:parseFloat(f.estimated_value)||0}).select().single();
+    const {data,error}=await sb.from("contacts").insert({...f,estimated_value:parseFloat(f.estimated_value)||0,house_photo:housePhoto||null}).select().single();
     if(error){setErr(error.message);setSaving(false);return;}
     onSave(data);
   };
@@ -440,6 +450,28 @@ function NewContactModal({userId,users,onSave,onClose}){
             <select value={f.assigned_rep_id} onChange={s("assigned_rep_id")} style={{width:"100%",padding:"8px 10px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:12.5,background:"#fff"}}>
               {users.map(u=><option key={u.id} value={u.id}>{u.full_name} ({u.role})</option>)}
             </select>
+          </Lbl>
+
+          {/* House Photo */}
+          <Lbl label="House Photo (optional)">
+            <div style={{border:`2px dashed ${housePhoto?C.sage:C.border}`,borderRadius:8,padding:"12px",textAlign:"center",background:C.tan,cursor:"pointer"}}
+              onClick={()=>photoRef.current?.click()}>
+              {housePhoto?(
+                <div>
+                  <img src={housePhoto} alt="House" style={{maxHeight:140,maxWidth:"100%",borderRadius:6,marginBottom:8,display:"block",margin:"0 auto 8px"}}/>
+                  <button onClick={e=>{e.stopPropagation();setHousePhoto(null);}}
+                    style={{fontSize:11,color:C.rust,background:"none",border:"none",cursor:"pointer",fontWeight:600}}>✕ Remove photo</button>
+                </div>
+              ):(
+                <div>
+                  <div style={{fontSize:28,marginBottom:6}}>📷</div>
+                  <div style={{fontSize:12.5,fontWeight:600,color:C.sub}}>Tap to take photo or upload</div>
+                  <div style={{fontSize:11,color:C.muted,marginTop:2}}>Great for roof/gutter inspections</div>
+                </div>
+              )}
+            </div>
+            <input ref={photoRef} type="file" accept="image/*" capture="environment"
+              onChange={handlePhotoCapture} style={{display:"none"}}/>
           </Lbl>
         </div>
         <div style={{padding:"8px 20px 20px",display:"flex",gap:10}}>
@@ -1289,6 +1321,7 @@ function GutterProposalModal({contact, dbUser, onSave, onClose}){
   const [saved, setSaved] = React.useState(false);
   const [emailSent, setEmailSent] = React.useState(false);
   const [showPreview, setShowPreview] = React.useState(false);
+  const [savedProposalToken, setSavedProposalToken] = React.useState(null);
   const [diagramData, setDiagramData] = React.useState(null);
   const [manualPrice, setManualPrice] = React.useState("");
   const [useManualPrice, setUseManualPrice] = React.useState(false);
@@ -1316,6 +1349,7 @@ function GutterProposalModal({contact, dbUser, onSave, onClose}){
         proposal_data: JSON.parse(JSON.stringify({
           gutter_ft: gutterFt||"",
           downspouts: downspouts||"",
+          house_photo: contact.house_photo||form.house_photo||null,
           punchouts: form.punchouts||"",
           a_elbows: form.a_elbows||"",
           b_elbows: form.b_elbows||"",
@@ -1335,7 +1369,7 @@ function GutterProposalModal({contact, dbUser, onSave, onClose}){
       };
       const {data, error} = await sb.from("proposals").insert(proposalData).select().single();
       if(error){ console.error("Proposal save error:", error); alert("Could not save: " + error.message); setSaving(false); return; }
-      setSaved(true);
+      setSavedProposalToken(data.public_token);
       if(onSave) onSave(data);
     } catch(e){ console.error(e); }
     finally{ setSaving(false); }
@@ -1441,6 +1475,22 @@ function GutterProposalModal({contact, dbUser, onSave, onClose}){
             <DiagramCanvas onSave={setDiagramData}/>
           </div>
 
+          {/* House Photo */}
+          <div style={{marginTop:14}}>
+            <div style={{fontSize:11,fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:0.5,marginBottom:6}}>House Photo</div>
+            {contact.house_photo?(
+              <img src={contact.house_photo} alt="House" style={{width:"100%",maxHeight:160,objectFit:"cover",borderRadius:8,border:`1px solid ${C.border}`,marginBottom:6}}/>
+            ):(
+              <div style={{border:`2px dashed ${C.border}`,borderRadius:8,padding:"10px",textAlign:"center",background:C.tan,cursor:"pointer"}}
+                onClick={()=>document.getElementById("proposalPhotoInput")?.click()}>
+                <div style={{fontSize:20,marginBottom:4}}>📷</div>
+                <div style={{fontSize:12,color:C.sub}}>Tap to add house photo</div>
+                <input id="proposalPhotoInput" type="file" accept="image/*" capture="environment" style={{display:"none"}}
+                  onChange={e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{setForm(p=>({...p,house_photo:ev.target.result}));};r.readAsDataURL(f);}}/>
+              </div>
+            )}
+          </div>
+
           {/* Notes */}
           <div style={{marginTop:14}}>
             <div style={{fontSize:11,fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:0.5,marginBottom:6}}>Notes</div>
@@ -1519,13 +1569,41 @@ function GutterProposalModal({contact, dbUser, onSave, onClose}){
         </div>
 
         {/* Footer */}
-        <div style={{padding:"12px 20px 20px",display:"flex",gap:10,borderTop:`1px solid ${C.border}`,position:"sticky",bottom:0,background:"#fff"}}>
-          <Btn onClick={()=>setShowPreview(true)} style={{justifyContent:"center",padding:"12px",fontSize:13}}>👁️ Preview</Btn>
-          <Btn primary onClick={saveProposal} disabled={saving} style={{flex:1,justifyContent:"center",padding:"12px",fontSize:13}}>
-            {saving?"Saving…":"💾 Save Proposal"}
+        <div style={{padding:"12px 20px 20px",display:"flex",gap:10,borderTop:`1px solid ${C.border}`,position:"sticky",bottom:0,background:"#fff",flexWrap:"wrap"}}>
+          <Btn onClick={()=>setShowPreview(true)} style={{justifyContent:"center",padding:"11px"}}>👁️ Preview</Btn>
+          <Btn primary onClick={saveProposal} disabled={saving} style={{flex:1,justifyContent:"center",padding:"11px",fontSize:13}}>
+            {saving?"Saving…":"💾 Save & Get Link"}
           </Btn>
-          <Btn onClick={onClose} style={{justifyContent:"center",padding:"12px"}}>Cancel</Btn>
+          <Btn onClick={onClose} style={{justifyContent:"center",padding:"11px"}}>Cancel</Btn>
         </div>
+        {savedProposalToken&&(
+          <div style={{padding:"12px 20px 16px",background:"#F0FBF6",borderTop:`1px solid #3D6E5C`}}>
+            <div style={{fontSize:12,fontWeight:700,color:"#3D6E5C",marginBottom:8}}>✅ Proposal saved! Share this link with your customer:</div>
+            <div style={{display:"flex",gap:8,alignItems:"center"}}>
+              <input readOnly value={`${window.location.origin}?token=${savedProposalToken}`}
+                style={{flex:1,padding:"8px 10px",border:`1px solid #3D6E5C`,borderRadius:6,fontSize:12,background:"#fff",outline:"none"}}
+                onClick={e=>e.target.select()}/>
+              <button onClick={()=>{
+                navigator.clipboard.writeText(`${window.location.origin}?token=${savedProposalToken}`);
+                alert("Link copied!");
+              }} style={{padding:"8px 14px",background:"#3D6E5C",color:"#fff",border:"none",borderRadius:6,fontSize:12,fontWeight:700,cursor:"pointer"}}>
+                📋 Copy
+              </button>
+              <button onClick={async()=>{
+                const link = `${window.location.origin}?token=${savedProposalToken}`;
+                await sendEmailViaResend({
+                  to: contact.email,
+                  toName: `${contact.first_name} ${contact.last_name}`,
+                  subject: `Your S&S Contracting Proposal`,
+                  text: `Hi ${contact.first_name},\n\nThank you for the opportunity to provide you with a proposal!\n\nClick the link below to view your proposal, review the details, and sign to accept:\n\n${link}\n\nIf you have any questions please don't hesitate to reach out.\n\nBest regards,\n${dbUser?.full_name||"S&S Contracting"}\nS&S Contracting Company LLC\n(405) 201-4139`,
+                });
+                alert("Proposal link emailed to " + contact.email + "!");
+              }} style={{padding:"8px 14px",background:"#C2562F",color:"#fff",border:"none",borderRadius:6,fontSize:12,fontWeight:700,cursor:"pointer"}}>
+                📧 Email Link
+              </button>
+            </div>
+          </div>
+        )}
 
         {showPreview&&<PrintableProposal
           contact={contact}
@@ -1880,6 +1958,24 @@ async function sendEmailViaResend({to, toName, subject, html, text}){
 
 function EmailModal({contact, dbUser, onClose}){
   const TEMPLATES = {
+    thankyou: {
+      subject: `Thank you for choosing S&S Contracting Company LLC!`,
+      body: `Hi ${contact.first_name},
+
+Thank you so much for choosing S&S Contracting Company LLC for your home improvement project! We truly appreciate your business and trust in us.
+
+We are committed to delivering the highest quality workmanship and will keep you informed every step of the way.
+
+If you have any questions before your project begins, please don't hesitate to reach out to us anytime.
+
+We look forward to working with you!
+
+Warm regards,
+${dbUser?.full_name||""}
+S&S Contracting Company LLC
+(405) 201-4139
+sandscontractingco.com`
+    },
     followup: {
       subject: `S&S Contracting - Thank you for speaking with us!`,
       body: `Hi ${contact.first_name},
@@ -1998,6 +2094,7 @@ S&S Contracting Company LLC
   };
 
   const TEMPLATE_LABELS = [
+    ["thankyou", "🙏 Thank You"],
     ["followup", "👋 Follow-Up"],
     ["proposal", "📄 Proposal"],
     ["appointment", "📅 Appointment"],
@@ -2105,6 +2202,7 @@ function RoofProposalModal({contact, dbUser, onSave, onClose}){
   const [showPreview, setShowPreview] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
   const [saved, setSaved] = React.useState(false);
+  const [savedToken, setSavedToken] = React.useState(null);
 
   const totalCost = lines.reduce((sum,l)=>sum+(parseFloat(l.cost)||0),0);
   const permitAmt = parseFloat(permitFee)||0;
@@ -2340,10 +2438,28 @@ function RoofProposalModal({contact, dbUser, onSave, onClose}){
         <div style={{padding:"12px 20px 20px",display:"flex",gap:10,borderTop:`1px solid ${C.border}`,position:"sticky",bottom:0,background:"#fff"}}>
           <Btn onClick={printProposal} style={{justifyContent:"center",padding:"11px"}}>🖨️ Print/PDF</Btn>
           <Btn primary onClick={save} disabled={saving} style={{flex:1,justifyContent:"center",padding:"11px",fontSize:13}}>
-            {saving?"Saving…":"💾 Save Proposal"}
+            {saving?"Saving…":"💾 Save & Get Link"}
           </Btn>
           <Btn onClick={onClose} style={{justifyContent:"center",padding:"11px"}}>Cancel</Btn>
         </div>
+        {savedToken&&(
+          <div style={{padding:"12px 20px 16px",background:"#F0FBF6",borderTop:`1px solid #3D6E5C`}}>
+            <div style={{fontSize:12,fontWeight:700,color:"#3D6E5C",marginBottom:8}}>✅ Saved! Share this link:</div>
+            <div style={{display:"flex",gap:8,alignItems:"center"}}>
+              <input readOnly value={`${window.location.origin}?token=${savedToken}`}
+                style={{flex:1,padding:"8px 10px",border:`1px solid #3D6E5C`,borderRadius:6,fontSize:12,background:"#fff",outline:"none"}}
+                onClick={e=>e.target.select()}/>
+              <button onClick={()=>{navigator.clipboard.writeText(`${window.location.origin}?token=${savedToken}`);alert("Link copied!");}}
+                style={{padding:"8px 14px",background:"#3D6E5C",color:"#fff",border:"none",borderRadius:6,fontSize:12,fontWeight:700,cursor:"pointer"}}>📋 Copy</button>
+              <button onClick={async()=>{
+                const link=`${window.location.origin}?token=${savedToken}`;
+                await sendEmailViaResend({to:contact.email,toName:`${contact.first_name} ${contact.last_name}`,subject:`Your S&S Contracting Proposal`,
+                  text:`Hi ${contact.first_name},\n\nPlease click the link below to view and sign your proposal:\n\n${link}\n\nBest regards,\n${dbUser?.full_name||"S&S Contracting"}\n(405) 201-4139`});
+                alert("Emailed to "+contact.email+"!");
+              }} style={{padding:"8px 14px",background:"#C2562F",color:"#fff",border:"none",borderRadius:6,fontSize:12,fontWeight:700,cursor:"pointer"}}>📧 Email</button>
+            </div>
+          </div>
+        )}
       </div>
       {showSigPad&&<SignaturePad onSave={sig=>{setSignature(sig);setShowSigPad(false);}} onClose={()=>setShowSigPad(false)}/>}
     </div>
@@ -2708,6 +2824,289 @@ function EditContactModal({contact, users, dbUser, onSave, onDelete, onClose}){
 }
 
 
+// ── Public Proposal Viewer ─────────────────────────────────────────
+function PublicProposalViewer(){
+  const [proposal, setProposal] = React.useState(null);
+  const [contact, setContact] = React.useState(null);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState("");
+  const [accepted, setAccepted] = React.useState(false);
+  const [showSigPad, setShowSigPad] = React.useState(false);
+  const [signature, setSignature] = React.useState(null);
+
+  const token = new URLSearchParams(window.location.search).get("token");
+
+  React.useEffect(()=>{
+    if(!token){setError("Invalid proposal link.");setLoading(false);return;}
+    const load = async() => {
+      try {
+        // Load proposal by token
+        const {data:p, error:pe} = await sb
+          .from("proposals")
+          .select("*")
+          .eq("public_token", token)
+          .single();
+        if(pe||!p){setError("Proposal not found.");setLoading(false);return;}
+        
+        // Load contact
+        const {data:c} = await sb.from("contacts").select("*").eq("id", p.contact_id).single();
+        
+        setProposal(p);
+        setContact(c);
+        if(p.status==="Signed") setAccepted(true);
+
+        // Track view
+        await sb.from("proposals").update({
+          view_count: (p.view_count||0) + 1,
+          last_viewed_at: new Date().toISOString(),
+        }).eq("id", p.id);
+
+      } catch(e){ setError("Could not load proposal."); }
+      finally { setLoading(false); }
+    };
+    load();
+  },[token]);
+
+  const handleSign = async(sig) => {
+    setSignature(sig);
+    setShowSigPad(false);
+    await sb.from("proposals").update({
+      status: "Signed",
+      signed_at: new Date().toISOString(),
+      proposal_data: {...(proposal.proposal_data||{}), signature: sig},
+    }).eq("id", proposal.id);
+    setAccepted(true);
+  };
+
+  if(loading) return(
+    <div style={{height:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#EFE9DC",fontFamily:"Arial,sans-serif"}}>
+      <div style={{textAlign:"center"}}>
+        <div style={{width:40,height:40,border:"4px solid #DCD3BC",borderTop:"4px solid #C2562F",borderRadius:"50%",animation:"spin 1s linear infinite",margin:"0 auto 16px"}}/>
+        <div style={{fontSize:14,color:"#8A8170"}}>Loading your proposal…</div>
+      </div>
+    </div>
+  );
+
+  if(error) return(
+    <div style={{height:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#EFE9DC",fontFamily:"Arial,sans-serif"}}>
+      <div style={{textAlign:"center",padding:40}}>
+        <div style={{fontSize:48,marginBottom:16}}>😕</div>
+        <div style={{fontSize:18,fontWeight:700,color:"#2E2A21",marginBottom:8}}>Proposal Not Found</div>
+        <div style={{fontSize:14,color:"#8A8170"}}>{error}</div>
+      </div>
+    </div>
+  );
+
+  if(!proposal||!contact) return null;
+
+  const pd = proposal.proposal_data||{};
+  const today = new Date().toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"});
+  const proposalDate = new Date(proposal.created_at).toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"});
+  const isGutter = pd.type==="gutter"||pd.gutter_ft;
+  const isRoof = pd.type==="roof";
+  const isMisc = pd.type==="misc";
+
+  return(
+    <div style={{minHeight:"100vh",background:"#EFE9DC",fontFamily:"Arial,sans-serif",padding:"20px 16px"}}>
+      <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
+      
+      <div style={{maxWidth:700,margin:"0 auto"}}>
+        {/* Accepted banner */}
+        {accepted&&(
+          <div style={{background:"#3D6E5C",color:"#fff",borderRadius:10,padding:"14px 20px",marginBottom:20,display:"flex",alignItems:"center",gap:12,fontSize:14,fontWeight:700}}>
+            ✅ Proposal Accepted — Thank you {contact.first_name}! We'll be in touch shortly.
+          </div>
+        )}
+
+        {/* Proposal document */}
+        <div style={{background:"#fff",borderRadius:12,boxShadow:"0 4px 20px rgba(0,0,0,0.1)",overflow:"hidden"}}>
+          
+          {/* Header */}
+          <div style={{borderBottom:"3px solid #4169E1",padding:"24px 28px",display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+            <div style={{display:"flex",alignItems:"center",gap:14}}>
+              <img src="${SS_LOGO}" alt="Logo" style={{width:65,height:65,objectFit:"contain",borderRadius:8,background:"#F4EFE6",padding:4}}/>
+              <div>
+                <div style={{fontSize:17,fontWeight:800,color:"#2E2A21"}}>S&S Contracting Company LLC</div>
+                <div style={{fontSize:11,color:"#888",textTransform:"uppercase",letterSpacing:"0.5px",marginTop:2}}>Roofing · Gutters · Outdoor Living</div>
+                <div style={{fontSize:11,color:"#888",marginTop:2}}>12200 Del Norte Way, Yukon, OK 73099</div>
+                <div style={{fontSize:11,color:"#888"}}>(405) 201-4139 · sandscontractingco.com</div>
+              </div>
+            </div>
+            <div style={{textAlign:"right"}}>
+              <div style={{fontSize:26,fontWeight:800,color:"#4169E1"}}>PROPOSAL</div>
+              <div style={{fontSize:12,color:"#888",marginTop:4}}>{proposalDate}</div>
+            </div>
+          </div>
+
+          {/* House photo */}
+          {(pd.house_photo||contact.house_photo)&&(
+            <div style={{padding:"0 28px 16px",borderBottom:"1px solid #EAE3D1"}}>
+              <img src={pd.house_photo||contact.house_photo} alt="Property" style={{width:"100%",maxHeight:220,objectFit:"cover",borderRadius:8}}/>
+            </div>
+          )}
+
+          {/* Customer info */}
+          <div style={{background:"#F7F3E9",padding:"16px 28px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px 20px",borderBottom:"1px solid #EAE3D1"}}>
+            {[
+              ["Customer",`${contact.first_name} ${contact.last_name}`],
+              ["Phone",contact.phone||"—"],
+              ["Property Address",contact.address||"—"],
+              ["City / State / ZIP",[contact.city,contact.state,contact.zip].filter(Boolean).join(", ")||"—"],
+            ].map(([label,value])=>(
+              <div key={label}>
+                <div style={{fontSize:9,fontWeight:700,color:"#A9A18E",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:2}}>{label}</div>
+                <div style={{fontSize:13,fontWeight:600,color:"#2E2A21"}}>{value}</div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{padding:"20px 28px"}}>
+            {/* Gutter proposal */}
+            {isGutter&&(
+              <>
+                <div style={{fontSize:11,fontWeight:700,color:"#8A8170",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:10}}>Measurements</div>
+                <table style={{width:"100%",borderCollapse:"collapse",marginBottom:16}}>
+                  <thead><tr style={{background:"#2E2A21"}}>
+                    <th style={{padding:"8px 12px",textAlign:"left",fontSize:11,color:"#fff",textTransform:"uppercase"}}>Item</th>
+                    <th style={{padding:"8px 12px",textAlign:"center",fontSize:11,color:"#fff",textTransform:"uppercase"}}>Qty</th>
+                  </tr></thead>
+                  <tbody>
+                    {[["Gutter (linear ft)",pd.gutter_ft,true],["Downspouts",pd.downspouts,true],
+                      ["Punchouts",pd.punchouts],["A Elbows",pd.a_elbows],["B Elbows",pd.b_elbows],
+                      ["Left Caps",pd.left_caps],["Right Caps",pd.right_caps],
+                      ["Inside Miters",pd.inside_miters],["Outside Miters",pd.outside_miters],
+                      ["Splash Shields",pd.splash_shields]
+                    ].map(([label,val,highlight],i)=>(
+                      <tr key={label} style={{background:highlight?"#FFF9EC":i%2===0?"#fff":"#F7F3E9"}}>
+                        <td style={{padding:"8px 12px",borderBottom:"1px solid #EAE3D1",fontSize:13,fontWeight:highlight?700:400}}>{label}</td>
+                        <td style={{padding:"8px 12px",borderBottom:"1px solid #EAE3D1",textAlign:"center",fontSize:13,fontWeight:600,color:val?"#C2562F":"#ccc"}}>{val||"—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {pd.diagram&&<div style={{marginBottom:16}}><img src={pd.diagram} style={{width:"100%",border:"1px solid #EAE3D1",borderRadius:8}}/></div>}
+              </>
+            )}
+
+            {/* Roof & Misc proposal line items */}
+            {(isRoof||isMisc)&&pd.lines&&pd.lines.length>0&&(
+              <>
+                <div style={{fontSize:11,fontWeight:700,color:"#8A8170",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:10}}>Description</div>
+                <table style={{width:"100%",borderCollapse:"collapse",marginBottom:16}}>
+                  <thead><tr style={{background:"#2E2A21"}}>
+                    <th style={{padding:"8px 12px",textAlign:"left",fontSize:11,color:"#fff",textTransform:"uppercase"}}>Description</th>
+                    <th style={{padding:"8px 12px",textAlign:"right",fontSize:11,color:"#fff",textTransform:"uppercase"}}>Cost</th>
+                  </tr></thead>
+                  <tbody>
+                    {pd.lines.map((l,i)=>(
+                      <tr key={i} style={{background:i%2===0?"#fff":"#F7F3E9"}}>
+                        <td style={{padding:"8px 12px",borderBottom:"1px solid #EAE3D1",fontSize:13}}>{l.desc}</td>
+                        <td style={{padding:"8px 12px",borderBottom:"1px solid #EAE3D1",textAlign:"right",fontSize:13,fontWeight:700,color:"#3D6E5C"}}>${(parseFloat(l.cost)||0).toLocaleString(undefined,{minimumFractionDigits:2})}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {pd.scopeItems&&pd.scopeItems.filter(s=>s.trim()).length>0&&(
+                  <div style={{marginBottom:16}}>
+                    {pd.scopeItems.filter(s=>s.trim()).map((s,i)=>(
+                      <div key={i} style={{padding:"3px 0",fontSize:12,color:"#5C5645"}}>
+                        <span style={{color:"#4169E1",fontWeight:700}}>• </span>{s}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Notes */}
+            {pd.notes&&(
+              <div style={{marginBottom:16,background:"#F7F3E9",borderRadius:8,padding:"12px 14px"}}>
+                <div style={{fontSize:10,fontWeight:700,color:"#A9A18E",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:4}}>Notes</div>
+                <div style={{fontSize:13,color:"#5C5645",lineHeight:1.5}}>{pd.notes}</div>
+              </div>
+            )}
+
+            {/* Pricing */}
+            <div style={{background:"#2E2A21",borderRadius:10,padding:"16px 20px",marginBottom:20}}>
+              {isGutter&&(
+                <>
+                  <div style={{display:"flex",justifyContent:"space-between",fontSize:12.5,color:"rgba(255,255,255,0.65)",marginBottom:6}}>
+                    <span>Gutter ({pd.gutter_ft||0} ft × $7.50/ft)</span>
+                    <span>${((parseFloat(pd.gutter_ft)||0)*7.5).toFixed(2)}</span>
+                  </div>
+                  <div style={{display:"flex",justifyContent:"space-between",fontSize:12.5,color:"rgba(255,255,255,0.65)",marginBottom:10}}>
+                    <span>Downspouts ({pd.downspouts||0} × $97.50)</span>
+                    <span>${((parseFloat(pd.downspouts)||0)*97.5).toFixed(2)}</span>
+                  </div>
+                </>
+              )}
+              {(isRoof||isMisc)&&pd.lines&&(
+                <>
+                  <div style={{display:"flex",justifyContent:"space-between",fontSize:12.5,color:"rgba(255,255,255,0.65)",marginBottom:6}}>
+                    <span>Subtotal</span>
+                    <span>${(pd.totalCost||0).toLocaleString(undefined,{minimumFractionDigits:2})}</span>
+                  </div>
+                  {parseFloat(pd.permitFee)>0&&(
+                    <div style={{display:"flex",justifyContent:"space-between",fontSize:12.5,color:"rgba(255,255,255,0.65)",marginBottom:6}}>
+                      <span>Permit Fee</span>
+                      <span>${parseFloat(pd.permitFee).toFixed(2)}</span>
+                    </div>
+                  )}
+                </>
+              )}
+              <div style={{display:"flex",justifyContent:"space-between",fontSize:20,fontWeight:800,color:"#fff",borderTop:"1px solid rgba(255,255,255,0.2)",paddingTop:12,marginTop:4}}>
+                <span>Total</span>
+                <span>${(proposal.total_amount||0).toLocaleString(undefined,{minimumFractionDigits:2})}</span>
+              </div>
+            </div>
+
+            {/* Rep info */}
+            <div style={{display:"flex",justifyContent:"space-between",marginBottom:24,paddingBottom:16,borderBottom:"1px solid #EAE3D1"}}>
+              <div>
+                <div style={{fontSize:13,fontWeight:700,color:"#2E2A21"}}>{pd.rep_name||"S&S Contracting"}</div>
+                <div style={{fontSize:12,color:"#8A8170"}}>{pd.rep_phone||"(405) 201-4139"}</div>
+              </div>
+              <div style={{textAlign:"right"}}>
+                <div style={{fontSize:13,fontWeight:700,color:"#2E2A21"}}>Joe Acosta</div>
+                <div style={{fontSize:12,color:"#8A8170"}}>(405) 919-1886</div>
+              </div>
+            </div>
+
+            {/* Signature section */}
+            {!accepted?(
+              <div style={{border:"1px solid #EAE3D1",borderRadius:10,overflow:"hidden"}}>
+                <div style={{background:"#F7F3E9",padding:"12px 16px",borderBottom:"1px solid #EAE3D1"}}>
+                  <div style={{fontSize:13,fontWeight:700,color:"#2E2A21"}}>Sign to Accept This Proposal</div>
+                  <div style={{fontSize:11.5,color:"#8A8170",marginTop:2}}>By signing below you agree to the terms outlined in this proposal</div>
+                </div>
+                <div style={{padding:"16px"}}>
+                  <button onClick={()=>setShowSigPad(true)}
+                    style={{width:"100%",padding:"14px",background:"#3D6E5C",color:"#fff",border:"none",borderRadius:8,fontSize:15,fontWeight:700,cursor:"pointer"}}>
+                    ✍️ Tap Here to Sign & Accept
+                  </button>
+                </div>
+              </div>
+            ):(
+              <div style={{border:"1px solid #3D6E5C",borderRadius:10,padding:"16px",background:"#F0FBF6"}}>
+                <div style={{fontSize:13,fontWeight:700,color:"#3D6E5C",marginBottom:8}}>✅ Proposal Accepted</div>
+                {(signature||pd.signature)&&<img src={signature||pd.signature} style={{maxHeight:70,display:"block",marginBottom:6}}/>}
+                <div style={{fontSize:12,color:"#5C5645"}}>{contact.first_name} {contact.last_name}</div>
+                <div style={{fontSize:11,color:"#8A8170"}}>Signed on {today}</div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div style={{textAlign:"center",padding:"20px 0",fontSize:11,color:"#8A8170"}}>
+          S&S Contracting Company LLC · 12200 Del Norte Way, Yukon, OK 73099 · (405) 201-4139
+        </div>
+      </div>
+
+      {showSigPad&&<SignaturePad onSave={handleSign} onClose={()=>setShowSigPad(false)}/>}
+    </div>
+  );
+}
+
 // ── Login ────────────────────────────────────────────────────────
 function Login({onLogin}){
   const [email,setEmail]=React.useState("sastotts@hotmail.com");
@@ -2838,6 +3237,10 @@ function App(){
   const filtered=(contacts||[]).filter(c=>`${c.first_name} ${c.last_name} ${c.service_type||""}`.toLowerCase().includes(search.toLowerCase()));
   const initials=dbUser?.full_name?.split(" ").map(n=>n[0]).join("").slice(0,2)||"??";
 
+  // Check if this is a public proposal link
+  const urlToken = new URLSearchParams(window.location.search).get("token");
+  if(urlToken) return <PublicProposalViewer/>;
+
   if(!session)return<Login onLogin={handleLogin}/>;
 
   return(
@@ -2945,7 +3348,12 @@ function App(){
               </div>
 
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"12px 22px",padding:"14px 22px"}}>
-                {[["📞","Phone",selected.phone||"—"],["✉️","Email",selected.email||"—"],
+                {selected.house_photo&&(
+                <div style={{gridColumn:"1 / -1",marginBottom:4}}>
+                  <img src={selected.house_photo} alt="House" style={{width:"100%",maxHeight:180,objectFit:"cover",borderRadius:8,border:`1px solid ${C.border}`}}/>
+                </div>
+              )}
+              {[["📞","Phone",selected.phone||"—"],["✉️","Email",selected.email||"—"],
                   ["📍","Address",[selected.address,selected.city,selected.state,selected.zip].filter(Boolean).join(", ")||"—"],
                   ["🕐","Added",selected.created_at?new Date(selected.created_at).toLocaleDateString():"—"]
                 ].map(([icon,label,value])=>(
