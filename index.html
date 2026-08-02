@@ -1370,6 +1370,7 @@ function GutterProposalModal({contact, dbUser, onSave, onClose}){
       const {data, error} = await sb.from("proposals").insert(proposalData).select().single();
       if(error){ console.error("Proposal save error:", error); alert("Could not save: " + error.message); setSaving(false); return; }
       setSavedProposalToken(data.public_token);
+      setSaved(true);
       if(onSave) onSave(data);
     } catch(e){ console.error(e); }
     finally{ setSaving(false); }
@@ -1389,15 +1390,69 @@ function GutterProposalModal({contact, dbUser, onSave, onClose}){
     </div>
   );
 
-  if(saved){
+  if(saved && savedProposalToken){
+    const proposalLink = `${window.location.origin}?token=${savedProposalToken}`;
     return(
       <div style={{position:"fixed",inset:0,background:"rgba(46,42,33,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:150,padding:16}}>
-        <div style={{background:C.cream,borderRadius:12,width:400,padding:"36px 28px",textAlign:"center",boxShadow:"0 16px 50px rgba(0,0,0,0.28)"}}>
-          <div style={{fontSize:48,marginBottom:12}}>🎉</div>
-          <div style={{fontSize:18,fontWeight:700,color:C.dark,marginBottom:6}}>Proposal Saved!</div>
-          <div style={{fontSize:13,color:C.sub,marginBottom:24}}>{contact.first_name}'s gutter proposal has been saved to their contact record.</div>
-          {signature&&<div style={{background:C.sage+"15",border:`1px solid ${C.sage}`,borderRadius:8,padding:"10px 14px",marginBottom:20,fontSize:13,color:C.sage,fontWeight:600}}>✅ Signed by customer</div>}
-          <Btn primary onClick={onClose} style={{width:"100%",justifyContent:"center",padding:"12px"}}>Done</Btn>
+        <div style={{background:C.cream,borderRadius:12,width:480,padding:"28px",boxShadow:"0 16px 50px rgba(0,0,0,0.28)"}}>
+          <div style={{textAlign:"center",marginBottom:20}}>
+            <div style={{fontSize:48,marginBottom:8}}>🎉</div>
+            <div style={{fontSize:18,fontWeight:700,color:C.dark,marginBottom:4}}>Proposal Saved!</div>
+            <div style={{fontSize:13,color:C.sub}}>{contact.first_name}'s proposal is ready to share</div>
+            {signature&&<div style={{background:C.sage+"15",border:`1px solid ${C.sage}`,borderRadius:8,padding:"8px 12px",marginTop:10,fontSize:12,color:C.sage,fontWeight:600}}>✅ Already signed by customer</div>}
+          </div>
+
+          {/* Proposal link */}
+          <div style={{background:C.tan,border:`1px solid ${C.border}`,borderRadius:10,padding:"14px 16px",marginBottom:14}}>
+            <div style={{fontSize:11,fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:0.5,marginBottom:8}}>Customer Proposal Link</div>
+            <div style={{display:"flex",gap:8,marginBottom:10}}>
+              <input readOnly value={proposalLink}
+                style={{flex:1,padding:"8px 10px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:11.5,background:"#fff",outline:"none"}}
+                onClick={e=>e.target.select()}/>
+              <button onClick={()=>{navigator.clipboard.writeText(proposalLink);alert("Link copied to clipboard!");}}
+                style={{padding:"8px 14px",background:C.sage,color:"#fff",border:"none",borderRadius:6,fontSize:12,fontWeight:700,cursor:"pointer"}}>
+                📋 Copy
+              </button>
+            </div>
+            {contact.email?(
+              <button onClick={async()=>{
+                try{
+                  await sendEmailViaResend({
+                    to: contact.email,
+                    toName: `${contact.first_name} ${contact.last_name}`,
+                    subject: `Your S&S Contracting Gutter Proposal`,
+                    text: `Hi ${contact.first_name},
+
+Thank you for the opportunity to provide you with a proposal!
+
+Please click the link below to view your gutter proposal, review the pricing, and sign to accept:
+
+${proposalLink}
+
+The link works on any phone, tablet, or computer.
+
+If you have any questions please don't hesitate to reach out.
+
+Best regards,
+${repName}
+S&S Contracting Company LLC
+(405) 201-4139
+sandscontractingco.com`,
+                  });
+                  alert(`✅ Proposal link emailed to ${contact.email}!`);
+                }catch(e){alert("Could not send email: "+e.message);}
+              }}
+                style={{width:"100%",padding:"11px",background:C.rust,color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+                📧 Email Proposal Link to {contact.first_name}
+              </button>
+            ):(
+              <div style={{background:"#FFF9EC",border:`1px solid #E8D7A8`,borderRadius:6,padding:"8px 12px",fontSize:12,color:C.gold}}>
+                ⚠️ No email on file — copy the link and share it manually
+              </div>
+            )}
+          </div>
+
+          <Btn onClick={onClose} style={{width:"100%",justifyContent:"center",padding:"11px"}}>Done</Btn>
         </div>
       </div>
     );
@@ -2233,6 +2288,7 @@ function RoofProposalModal({contact, dbUser, onSave, onClose}){
       proposal_data: JSON.parse(JSON.stringify(proposalData)),
     }).select().single();
     if(error){alert("Could not save: "+error.message);setSaving(false);return;}
+    setSavedToken(data.public_token);
     setSaved(true);
     if(onSave)onSave(data);
     setSaving(false);
@@ -2313,16 +2369,50 @@ function RoofProposalModal({contact, dbUser, onSave, onClose}){
     setTimeout(()=>URL.revokeObjectURL(url),5000);
   };
 
-  if(saved) return(
-    <div style={{position:"fixed",inset:0,background:"rgba(46,42,33,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:150,padding:16}}>
-      <div style={{background:C.cream,borderRadius:12,width:380,padding:"36px 28px",textAlign:"center",boxShadow:"0 16px 50px rgba(0,0,0,0.28)"}}>
-        <div style={{fontSize:48,marginBottom:12}}>🎉</div>
-        <div style={{fontSize:18,fontWeight:700,color:C.dark,marginBottom:6}}>Roof Proposal Saved!</div>
-        <div style={{fontSize:13,color:C.sub,marginBottom:24}}>Saved to {contact.first_name}'s contact record.</div>
-        <Btn primary onClick={onClose} style={{width:"100%",justifyContent:"center",padding:"12px"}}>Done</Btn>
+  if(saved && savedToken){
+    const proposalLink = `${window.location.origin}?token=${savedToken}`;
+    return(
+      <div style={{position:"fixed",inset:0,background:"rgba(46,42,33,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:150,padding:16}}>
+        <div style={{background:C.cream,borderRadius:12,width:480,padding:"28px",boxShadow:"0 16px 50px rgba(0,0,0,0.28)"}}>
+          <div style={{textAlign:"center",marginBottom:20}}>
+            <div style={{fontSize:48,marginBottom:8}}>🎉</div>
+            <div style={{fontSize:18,fontWeight:700,color:C.dark,marginBottom:4}}>Roof Proposal Saved!</div>
+            <div style={{fontSize:13,color:C.sub}}>{contact.first_name}'s proposal is ready to share</div>
+            {signature&&<div style={{background:C.sage+"15",border:`1px solid ${C.sage}`,borderRadius:8,padding:"8px 12px",marginTop:10,fontSize:12,color:C.sage,fontWeight:600}}>✅ Already signed by customer</div>}
+          </div>
+          <div style={{background:C.tan,border:`1px solid ${C.border}`,borderRadius:10,padding:"14px 16px",marginBottom:14}}>
+            <div style={{fontSize:11,fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:0.5,marginBottom:8}}>Customer Proposal Link</div>
+            <div style={{display:"flex",gap:8,marginBottom:10}}>
+              <input readOnly value={proposalLink} style={{flex:1,padding:"8px 10px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:11.5,background:"#fff",outline:"none"}} onClick={e=>e.target.select()}/>
+              <button onClick={()=>{navigator.clipboard.writeText(proposalLink);alert("Link copied!");}} style={{padding:"8px 14px",background:C.sage,color:"#fff",border:"none",borderRadius:6,fontSize:12,fontWeight:700,cursor:"pointer"}}>📋 Copy</button>
+            </div>
+            {contact.email?(
+              <button onClick={async()=>{
+                try{
+                  await sendEmailViaResend({to:contact.email,toName:`${contact.first_name} ${contact.last_name}`,subject:`Your S&S Contracting Roof Proposal`,
+                    text:`Hi ${contact.first_name},
+
+Please click the link below to view your roof proposal and sign to accept:
+
+${proposalLink}
+
+Best regards,
+${dbUser?.full_name||"S&S Contracting"}
+(405) 201-4139`});
+                  alert(`✅ Emailed to ${contact.email}!`);
+                }catch(e){alert("Could not send: "+e.message);}
+              }} style={{width:"100%",padding:"11px",background:C.rust,color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:700,cursor:"pointer"}}>
+                📧 Email Proposal Link to {contact.first_name}
+              </button>
+            ):(
+              <div style={{background:"#FFF9EC",border:`1px solid #E8D7A8`,borderRadius:6,padding:"8px 12px",fontSize:12,color:C.gold}}>⚠️ No email on file — copy the link and share manually</div>
+            )}
+          </div>
+          <Btn onClick={onClose} style={{width:"100%",justifyContent:"center",padding:"11px"}}>Done</Btn>
+        </div>
       </div>
-    </div>
-  );
+    );
+  }
 
   return(
     <div style={{position:"fixed",inset:0,background:"rgba(46,42,33,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:150,padding:8}} onClick={onClose}>
@@ -3359,9 +3449,20 @@ function App(){
                 ].map(([icon,label,value])=>(
                   <div key={label} style={{display:"flex",gap:8}}>
                     <span style={{fontSize:13,marginTop:1,flexShrink:0}}>{icon}</span>
-                    <div style={{minWidth:0}}>
+                    <div style={{minWidth:0,flex:1}}>
                       <div style={{fontSize:9.5,color:C.muted,textTransform:"uppercase",letterSpacing:0.4,fontWeight:600}}>{label}</div>
-                      <div style={{fontSize:12.5,color:C.text,fontWeight:500,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{value}</div>
+                      <div style={{display:"flex",alignItems:"center",gap:6}}>
+                        <div style={{fontSize:12.5,color:C.text,fontWeight:500,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",flex:1}}>{value}</div>
+                        {label==="Address"&&selected.address&&(
+                          <button onClick={()=>{
+                            const addr = encodeURIComponent([selected.address,selected.city,selected.state,selected.zip].filter(Boolean).join(", "));
+                            window.open(`https://www.google.com/maps/search/?api=1&query=${addr}`,"_blank");
+                          }} title="Open in Google Maps"
+                            style={{background:C.indigo,border:"none",borderRadius:5,padding:"3px 8px",fontSize:10.5,fontWeight:700,color:"#fff",cursor:"pointer",flexShrink:0,whiteSpace:"nowrap"}}>
+                            🗺️ Map
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))}
