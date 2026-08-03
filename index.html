@@ -453,24 +453,35 @@ function NewContactModal({userId,users,onSave,onClose}){
           </Lbl>
 
           {/* House Photo */}
-          <Lbl label="House Photo (optional)">
-            <div style={{border:`2px dashed ${housePhoto?C.sage:C.border}`,borderRadius:8,padding:"12px",textAlign:"center",background:C.tan,cursor:"pointer"}}
-              onClick={()=>photoRef.current?.click()}>
-              {housePhoto?(
-                <div>
-                  <img src={housePhoto} alt="House" style={{maxHeight:140,maxWidth:"100%",borderRadius:6,marginBottom:8,display:"block",margin:"0 auto 8px"}}/>
-                  <button onClick={e=>{e.stopPropagation();setHousePhoto(null);}}
-                    style={{fontSize:11,color:C.rust,background:"none",border:"none",cursor:"pointer",fontWeight:600}}>✕ Remove photo</button>
+          <Lbl label="House Photo">
+            {housePhoto?(
+              <div style={{position:"relative",borderRadius:8,overflow:"hidden",border:`2px solid ${C.sage}`}}>
+                <img src={housePhoto} alt="House" style={{width:"100%",maxHeight:180,objectFit:"cover",display:"block"}}/>
+                <div style={{position:"absolute",bottom:0,left:0,right:0,background:"rgba(0,0,0,0.5)",padding:"6px 10px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                  <span style={{fontSize:11,color:"#fff",fontWeight:600}}>✅ Photo captured</span>
+                  <button onClick={()=>setHousePhoto(null)}
+                    style={{fontSize:11,color:"#fff",background:"rgba(194,86,47,0.8)",border:"none",borderRadius:4,padding:"3px 8px",cursor:"pointer",fontWeight:600}}>
+                    ✕ Retake
+                  </button>
                 </div>
-              ):(
-                <div>
-                  <div style={{fontSize:28,marginBottom:6}}>📷</div>
-                  <div style={{fontSize:12.5,fontWeight:600,color:C.sub}}>Tap to take photo or upload</div>
-                  <div style={{fontSize:11,color:C.muted,marginTop:2}}>Great for roof/gutter inspections</div>
-                </div>
-              )}
-            </div>
-            <input ref={photoRef} type="file" accept="image/*" capture="environment"
+              </div>
+            ):(
+              <div style={{display:"flex",gap:8}}>
+                <button onClick={()=>{
+                  const inp = document.getElementById("cameraInputNew");
+                  if(inp){inp.accept="image/*";inp.capture="environment";inp.click();}
+                }} style={{flex:1,padding:"14px",background:C.dark,color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+                  📷 Take Photo of House
+                </button>
+                <button onClick={()=>{
+                  const inp = document.getElementById("cameraInputNew");
+                  if(inp){inp.removeAttribute("capture");inp.click();}
+                }} style={{padding:"14px 16px",background:"#fff",color:C.sub,border:`1px solid ${C.border}`,borderRadius:8,fontSize:13,fontWeight:700,cursor:"pointer"}}>
+                  📁 Upload
+                </button>
+              </div>
+            )}
+            <input id="cameraInputNew" type="file" accept="image/*" capture="environment"
               onChange={handlePhotoCapture} style={{display:"none"}}/>
           </Lbl>
         </div>
@@ -1415,36 +1426,7 @@ function GutterProposalModal({contact, dbUser, onSave, onClose}){
               </button>
             </div>
             {contact.email?(
-              <button onClick={async()=>{
-                try{
-                  await sendEmailViaResend({
-                    to: contact.email,
-                    toName: `${contact.first_name} ${contact.last_name}`,
-                    subject: `Your S&S Contracting Gutter Proposal`,
-                    text: `Hi ${contact.first_name},
-
-Thank you for the opportunity to provide you with a proposal!
-
-Please click the link below to view your gutter proposal, review the pricing, and sign to accept:
-
-${proposalLink}
-
-The link works on any phone, tablet, or computer.
-
-If you have any questions please don't hesitate to reach out.
-
-Best regards,
-${repName}
-S&S Contracting Company LLC
-(405) 201-4139
-sandscontractingco.com`,
-                  });
-                  alert(`✅ Proposal link emailed to ${contact.email}!`);
-                }catch(e){alert("Could not send email: "+e.message);}
-              }}
-                style={{width:"100%",padding:"11px",background:C.rust,color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
-                📧 Email Proposal Link to {contact.first_name}
-              </button>
+              <ProposalEmailDraft contact={contact} proposalLink={proposalLink} repName={repName} onClose={()=>{}}/>
             ):(
               <div style={{background:"#FFF9EC",border:`1px solid #E8D7A8`,borderRadius:6,padding:"8px 12px",fontSize:12,color:C.gold}}>
                 ⚠️ No email on file — copy the link and share it manually
@@ -2387,23 +2369,7 @@ function RoofProposalModal({contact, dbUser, onSave, onClose}){
               <button onClick={()=>{navigator.clipboard.writeText(proposalLink);alert("Link copied!");}} style={{padding:"8px 14px",background:C.sage,color:"#fff",border:"none",borderRadius:6,fontSize:12,fontWeight:700,cursor:"pointer"}}>📋 Copy</button>
             </div>
             {contact.email?(
-              <button onClick={async()=>{
-                try{
-                  await sendEmailViaResend({to:contact.email,toName:`${contact.first_name} ${contact.last_name}`,subject:`Your S&S Contracting Roof Proposal`,
-                    text:`Hi ${contact.first_name},
-
-Please click the link below to view your roof proposal and sign to accept:
-
-${proposalLink}
-
-Best regards,
-${dbUser?.full_name||"S&S Contracting"}
-(405) 201-4139`});
-                  alert(`✅ Emailed to ${contact.email}!`);
-                }catch(e){alert("Could not send: "+e.message);}
-              }} style={{width:"100%",padding:"11px",background:C.rust,color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:700,cursor:"pointer"}}>
-                📧 Email Proposal Link to {contact.first_name}
-              </button>
+              <ProposalEmailDraft contact={contact} proposalLink={proposalLink} repName={dbUser?.full_name||"S&S Contracting"} onClose={()=>{}}/>
             ):(
               <div style={{background:"#FFF9EC",border:`1px solid #E8D7A8`,borderRadius:6,padding:"8px 12px",fontSize:12,color:C.gold}}>⚠️ No email on file — copy the link and share manually</div>
             )}
@@ -3197,6 +3163,98 @@ function PublicProposalViewer(){
   );
 }
 
+// ── Proposal Email Draft ──────────────────────────────────────────
+function ProposalEmailDraft({contact, proposalLink, repName}){
+  const [subject, setSubject] = React.useState(`Your S&S Contracting Proposal is Ready!`);
+  const [body, setBody] = React.useState(
+`Hi ${contact.first_name},
+
+Thank you so much for the opportunity to earn your business! We truly appreciate it.
+
+Please click the link below to view your proposal, review the details, and sign to accept:
+
+${proposalLink}
+
+The link works on any phone, tablet, or computer — no app needed!
+
+Once you've had a chance to review, feel free to reach out with any questions. We're happy to go over anything with you.
+
+We look forward to working with you!
+
+Best regards,
+${repName}
+S&S Contracting Company LLC
+(405) 201-4139
+sandscontractingco.com`
+  );
+  const [sending, setSending] = React.useState(false);
+  const [sent, setSent] = React.useState(false);
+
+  const send = async() => {
+    setSending(true);
+    try{
+      await sendEmailViaResend({
+        to: contact.email,
+        toName: `${contact.first_name} ${contact.last_name}`,
+        subject,
+        text: body,
+        html: `<div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.6;color:#333;max-width:600px;margin:0 auto;">
+          <div style="background:#2E2A21;padding:16px 24px;border-bottom:3px solid #4169E1;">
+            <div style="font-size:18px;font-weight:800;color:#fff;">S&S Contracting Company LLC</div>
+            <div style="font-size:11px;color:#A9A18E;margin-top:2px;">Roofing · Gutters · Outdoor Living</div>
+          </div>
+          <div style="padding:24px;background:#fff;border:1px solid #ddd;border-top:none;">
+            ${body.split("
+").map(line=>
+              line.includes(proposalLink)
+                ? `<p style="margin:16px 0;"><a href="${proposalLink}" style="display:inline-block;background:#C2562F;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px;">👉 View & Sign My Proposal</a></p>`
+                : line.trim() ? `<p style="margin:0 0 10px;">${line}</p>` : "<br/>"
+            ).join("")}
+          </div>
+          <div style="background:#F7F3E9;padding:12px 24px;font-size:11px;color:#888;border:1px solid #ddd;border-top:none;">
+            S&S Contracting Company LLC · 12200 Del Norte Way, Yukon, OK 73099 · (405) 201-4139 · sandscontractingco.com
+          </div>
+        </div>`,
+      });
+      setSent(true);
+    }catch(e){alert("Could not send: "+e.message);}
+    finally{setSending(false);}
+  };
+
+  if(sent) return(
+    <div style={{background:"#F0FBF6",border:`1px solid ${C.sage}`,borderRadius:8,padding:"14px 16px",textAlign:"center"}}>
+      <div style={{fontSize:24,marginBottom:6}}>📨</div>
+      <div style={{fontSize:13,fontWeight:700,color:C.sage}}>Email sent to {contact.first_name}!</div>
+      <div style={{fontSize:11.5,color:C.sub,marginTop:4}}>They'll receive the proposal link in their inbox.</div>
+    </div>
+  );
+
+  return(
+    <div style={{border:`1px solid ${C.border}`,borderRadius:8,overflow:"hidden"}}>
+      <div style={{background:C.rust,padding:"10px 14px",fontSize:12,fontWeight:700,color:"#fff"}}>
+        📧 Email Proposal to {contact.first_name} ({contact.email})
+      </div>
+      <div style={{padding:"12px 14px",display:"flex",flexDirection:"column",gap:10,background:"#fff"}}>
+        <div>
+          <div style={{fontSize:9.5,fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>Subject</div>
+          <input value={subject} onChange={e=>setSubject(e.target.value)}
+            style={{width:"100%",padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:12.5,outline:"none",boxSizing:"border-box"}}/>
+        </div>
+        <div>
+          <div style={{fontSize:9.5,fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>Message (editable)</div>
+          <textarea value={body} onChange={e=>setBody(e.target.value)} rows={10}
+            style={{width:"100%",padding:"8px 10px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:12,outline:"none",resize:"vertical",boxSizing:"border-box",lineHeight:1.5}}/>
+        </div>
+        <button onClick={send} disabled={sending}
+          style={{width:"100%",padding:"12px",background:C.rust,color:"#fff",border:"none",borderRadius:8,fontSize:14,fontWeight:700,cursor:sending?"not-allowed":"pointer",opacity:sending?0.7:1}}>
+          {sending?"📨 Sending…":"📧 Send Proposal Email"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+
 // ── Login ────────────────────────────────────────────────────────
 function Login({onLogin}){
   const [email,setEmail]=React.useState("sastotts@hotmail.com");
@@ -3394,7 +3452,10 @@ function App(){
                 <div style={{textAlign:"center",padding:"30px 16px",color:C.muted,fontSize:12.5}}>{(contacts||[]).length===0?"No contacts yet. Click + to add your first customer.":"No matches found."}</div>
               ):filtered.map(c=>(
                 <button key={c.id} onClick={()=>setSelected(c)} style={{width:"100%",display:"flex",gap:9,padding:"9px 8px",border:"none",background:selected?.id===c.id?"#fff":"transparent",borderRadius:8,cursor:"pointer",textAlign:"left",marginBottom:2,boxShadow:selected?.id===c.id?"0 1px 4px rgba(58,53,42,0.1)":"none"}}>
-                  <div style={{width:32,height:32,borderRadius:"50%",background:avatarColor(c.first_name),color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0}}>{c.first_name?.[0]}{c.last_name?.[0]}</div>
+                  {c.house_photo
+                    ? <img src={c.house_photo} alt="House" style={{width:32,height:32,borderRadius:6,objectFit:"cover",flexShrink:0,border:`1px solid ${C.border}`}}/>
+                    : <div style={{width:32,height:32,borderRadius:"50%",background:avatarColor(c.first_name),color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0}}>{c.first_name?.[0]}{c.last_name?.[0]}</div>
+                  }
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{fontSize:12.5,fontWeight:700,color:C.text}}>{c.first_name} {c.last_name}</div>
                     <div style={{fontSize:11,color:C.sub,margin:"1px 0 4px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{c.service_type||"—"}</div>
@@ -3412,7 +3473,13 @@ function App(){
           {selected?(
             <div style={{flex:1,background:C.cream,display:"flex",flexDirection:"column",overflowY:"auto",borderRight:`1px solid ${C.border}`}}>
               <div style={{display:"flex",alignItems:"center",gap:13,padding:"18px 22px 14px",borderBottom:`1px solid ${C.border}`}}>
-                <div style={{width:48,height:48,borderRadius:"50%",background:avatarColor(selected.first_name),color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:700,flexShrink:0}}>{selected.first_name?.[0]}{selected.last_name?.[0]}</div>
+                {selected.house_photo
+                  ? <div style={{position:"relative",flexShrink:0}}>
+                      <img src={selected.house_photo} alt="House" style={{width:70,height:54,objectFit:"cover",borderRadius:8,border:`1px solid ${C.border}`,display:"block"}}/>
+                      <div style={{position:"absolute",bottom:-8,right:-8,width:26,height:26,borderRadius:"50%",background:avatarColor(selected.first_name),color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:700,border:"2px solid #fff"}}>{selected.first_name?.[0]}{selected.last_name?.[0]}</div>
+                    </div>
+                  : <div style={{width:48,height:48,borderRadius:"50%",background:avatarColor(selected.first_name),color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:700,flexShrink:0}}>{selected.first_name?.[0]}{selected.last_name?.[0]}</div>
+                }
                 <div style={{flex:1}}>
                   <div style={{display:"flex",alignItems:"center",gap:9,flexWrap:"wrap"}}>
                     <h2 style={{fontSize:19,margin:0,fontWeight:700,color:C.dark}}>{selected.first_name} {selected.last_name}</h2>
