@@ -1401,8 +1401,8 @@ function GutterProposalModal({contact, dbUser, onSave, onClose}){
     </div>
   );
 
-  if(saved && savedProposalToken){
-    const proposalLink = `${window.location.origin}?token=${savedProposalToken}`;
+  if(saved){
+    const proposalLink = savedProposalToken ? `${window.location.origin}?token=${savedProposalToken}` : null;
     return(
       <div style={{position:"fixed",inset:0,background:"rgba(46,42,33,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:150,padding:16}}>
         <div style={{background:C.cream,borderRadius:12,width:480,padding:"28px",boxShadow:"0 16px 50px rgba(0,0,0,0.28)"}}>
@@ -2350,8 +2350,8 @@ function RoofProposalModal({contact, dbUser, onSave, onClose}){
     setTimeout(()=>URL.revokeObjectURL(url),5000);
   };
 
-  if(saved && savedToken){
-    const proposalLink = `${window.location.origin}?token=${savedToken}`;
+  if(saved){
+    const proposalLink = savedToken ? `${window.location.origin}?token=${savedToken}` : null;
     return(
       <div style={{position:"fixed",inset:0,background:"rgba(46,42,33,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:150,padding:16}}>
         <div style={{background:C.cream,borderRadius:12,width:480,padding:"28px",boxShadow:"0 16px 50px rgba(0,0,0,0.28)"}}>
@@ -2742,6 +2742,117 @@ function MiscProposalModal({contact, dbUser, onSave, onClose}){
         </div>
       </div>
       {showSigPad&&<SignaturePad onSave={sig=>{setSignature(sig);setShowSigPad(false);}} onClose={()=>setShowSigPad(false)}/>}
+    </div>
+  );
+}
+
+
+// ── Jobsite Photos Tab ─────────────────────────────────────────────
+function JobsitePhotosTab({contactId, contact}){
+  const [photos, setPhotos] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+  const [uploading, setUploading] = React.useState(false);
+  const [viewPhoto, setViewPhoto] = React.useState(null);
+  const cameraRef = React.useRef(null);
+
+  React.useEffect(()=>{
+    sb.from("contacts").select("jobsite_photos").eq("id", contactId).single()
+      .then(({data})=>{
+        if(data && data.jobsite_photos) setPhotos(data.jobsite_photos);
+        setLoading(false);
+      });
+  },[contactId]);
+
+  const handlePhoto = async(e) => {
+    const file = e.target.files[0];
+    if(!file) return;
+    setUploading(true);
+    const reader = new FileReader();
+    reader.onload = async(ev) => {
+      const newPhoto = {
+        id: Date.now(),
+        data: ev.target.result,
+        taken_at: new Date().toISOString(),
+        label: "",
+      };
+      const updated = [...photos, newPhoto];
+      setPhotos(updated);
+      await sb.from("contacts").update({jobsite_photos: updated}).eq("id", contactId);
+      setUploading(false);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const deletePhoto = async(id) => {
+    const updated = photos.filter(p=>p.id!==id);
+    setPhotos(updated);
+    await sb.from("contacts").update({jobsite_photos: updated}).eq("id", contactId);
+  };
+
+  const updateLabel = async(id, label) => {
+    const updated = photos.map(p=>p.id===id?{...p,label}:p);
+    setPhotos(updated);
+    await sb.from("contacts").update({jobsite_photos: updated}).eq("id", contactId);
+  };
+
+  return(
+    <div>
+      {/* Camera button */}
+      <div style={{display:"flex",gap:8,marginBottom:14}}>
+        <button onClick={()=>{cameraRef.current.capture="environment";cameraRef.current.click();}}
+          style={{flex:1,padding:"11px",background:C.dark,color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+          📷 Take Jobsite Photo
+        </button>
+        <button onClick={()=>{cameraRef.current.removeAttribute("capture");cameraRef.current.click();}}
+          style={{padding:"11px 14px",background:"#fff",color:C.sub,border:`1px solid ${C.border}`,borderRadius:8,fontSize:13,fontWeight:700,cursor:"pointer"}}>
+          📁 Upload
+        </button>
+        <input ref={cameraRef} type="file" accept="image/*" capture="environment"
+          onChange={handlePhoto} style={{display:"none"}}/>
+      </div>
+
+      {uploading&&<div style={{textAlign:"center",padding:"12px",color:C.sub,fontSize:12}}>📤 Saving photo...</div>}
+
+      {loading?<Spinner/>:photos.length===0?(
+        <div style={{textAlign:"center",padding:"30px 20px",color:C.muted}}>
+          <div style={{fontSize:32,marginBottom:8}}>📷</div>
+          <div style={{fontSize:13,fontWeight:700,color:C.sub}}>No jobsite photos yet</div>
+          <div style={{fontSize:11.5,marginTop:4}}>Tap "Take Jobsite Photo" to capture photos tied to this project</div>
+        </div>
+      ):(
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+          {photos.map(photo=>(
+            <div key={photo.id} style={{border:`1px solid ${C.border}`,borderRadius:8,overflow:"hidden",background:"#fff"}}>
+              <div style={{position:"relative",cursor:"pointer"}} onClick={()=>setViewPhoto(photo)}>
+                <img src={photo.data} alt="Jobsite" style={{width:"100%",height:120,objectFit:"cover",display:"block"}}/>
+                <div style={{position:"absolute",top:4,right:4,display:"flex",gap:4}}>
+                  <button onClick={e=>{e.stopPropagation();if(window.confirm("Delete this photo?"))deletePhoto(photo.id);}}
+                    style={{background:"rgba(194,86,47,0.85)",border:"none",borderRadius:4,padding:"3px 7px",color:"#fff",fontSize:11,cursor:"pointer",fontWeight:700}}>
+                    ✕
+                  </button>
+                </div>
+              </div>
+              <div style={{padding:"6px 8px"}}>
+                <input value={photo.label} onChange={e=>updateLabel(photo.id, e.target.value)}
+                  placeholder="Add label (e.g. Front gutter, Roof damage)"
+                  style={{width:"100%",border:"none",fontSize:11,color:C.sub,outline:"none",background:"transparent",boxSizing:"border-box"}}/>
+                <div style={{fontSize:9.5,color:C.muted,marginTop:2}}>{new Date(photo.taken_at).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Full screen photo viewer */}
+      {viewPhoto&&(
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.9)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:200,padding:16}}
+          onClick={()=>setViewPhoto(null)}>
+          <div style={{maxWidth:"90vw",maxHeight:"90vh"}}>
+            <img src={viewPhoto.data} alt="Jobsite" style={{maxWidth:"100%",maxHeight:"85vh",objectFit:"contain",borderRadius:8}}/>
+            {viewPhoto.label&&<div style={{color:"#fff",textAlign:"center",padding:"8px",fontSize:13}}>{viewPhoto.label}</div>}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -3543,7 +3654,7 @@ function App(){
               </div>
 
               <div style={{display:"flex",gap:2,padding:"0 22px",borderBottom:`1px solid ${C.border}`}}>
-                {["Notes","Activities","Proposals","Documents","Email History"].map(t=>(
+                {["Notes","Activities","Proposals","Jobsite Photos","Documents","Email History"].map(t=>(
                   <button key={t} onClick={()=>setActiveTab(t)} style={{padding:"9px 12px",border:"none",background:"transparent",fontSize:12,fontWeight:600,color:activeTab===t?C.rust:C.muted,cursor:"pointer",borderBottom:activeTab===t?`2px solid ${C.rust}`:"2px solid transparent"}}>{t}</button>
                 ))}
               </div>
@@ -3613,6 +3724,7 @@ function App(){
                   </div>
                 )}
                 {activeTab==="Proposals"&&<ProposalsTab contactId={selected.id} contact={selected} dbUser={dbUser} onNew={()=>setShowGutterProposal(true)} onNewRoof={()=>setShowRoofProposal(true)} onNewMisc={()=>setShowMiscProposal(true)}/>}
+                {activeTab==="Jobsite Photos"&&<JobsitePhotosTab contactId={selected.id} contact={selected}/>}
                 {activeTab==="Documents"&&<div style={{textAlign:"center",padding:"30px 20px",color:C.muted}}>📁<br/><br/>No documents yet.<br/>Upload contracts, photos &amp; reports — Phase 2.</div>}
                 {activeTab==="Email History"&&<EmailHistoryTab contactId={selected.id}/>}
               </div>
