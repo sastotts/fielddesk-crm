@@ -774,7 +774,7 @@ function CalendarView({activities, contacts, users, dbUser, onActivityClick, onN
           <div style={{display:"flex",gap:8,alignItems:"center"}}>
             {/* Viewing label */}
             <div style={{fontSize:12,fontWeight:600,color:C.sub,padding:"6px 10px",background:C.tan,borderRadius:7,border:`1px solid ${C.border}`}}>
-              👤 {repFilter===(dbUser&&dbUser.id)||repFilter==="mine" ? "My Calendar" : ((users.find(u=>u.id===repFilter)||{full_name:"Team"}).full_name)}
+              👤 {repFilter===(dbUser&&dbUser.id)||repFilter==="mine" ? "My Calendar" : (users.find(u=>u.id===repFilter)||{full_name:"Team"}).full_name}
             </div>
             {isManager&&(
               <button onClick={()=>setShowRepPanel(p=>!p)}
@@ -1002,7 +1002,7 @@ function PipelineView({contacts,users,dbUser,onSelectContact}){
                         </div>
                       </div>
                       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                        <span style={{fontSize:10,color:C.sub}}>{((users.find(u=>u.id===c.assigned_rep_id)||{full_name:"?"}).full_name||"?").split(" ")[0]||"?"}</span>
+                        <span style={{fontSize:10,color:C.sub}}>{((users.find(u=>u.id===c.assigned_rep_id)||{full_name:"?"}).full_name||"?").split(" ")[0]}</span>
                         <span style={{fontSize:11.5,fontWeight:700,color:C.sage}}>${(c.estimated_value||0).toLocaleString()}</span>
                       </div>
                       {c.phone&&<div style={{fontSize:10,color:C.muted,marginTop:4}}>📞 {c.phone}</div>}
