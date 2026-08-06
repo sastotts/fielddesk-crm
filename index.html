@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>S&amp;S Contracting</title>
+  <title>S&S Contracting</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
@@ -92,9 +92,9 @@ function Spinner(){
   </div>;
 }
 function ErrBox({msg}){
-  return msg?<div style={{background:"#FFF0ED",border:"1px solid #F5C4B8",borderRadius:7,padding:"10px 12px",fontSize:12.5,color:"#8B2020",marginBottom:12}}>⚠️ {msg}</div>:null;
+  return msg?<div style={{background:"#FFF0ED",border:"1px solid #F5C4B8",borderRadius:7,padding:"10px 12px",fontSize:12.5,color:"#8B2020",marginBottom:12}}>! {msg}</div>:null;
 }
-const avatarColor=name=>["#C2562F","#3D6E5C","#5B5BA8","#8A6D3B","#2E6D8A","#7A3B69"][(name?.charCodeAt(0)||0)%6];
+const avatarColor=name=>["#C2562F","#3D6E5C","#5B5BA8","#8A6D3B","#2E6D8A","#7A3B69"][((name&&name.charCodeAt(0))||0)%6];
 
 // ── Calendar Picker ───────────────────────────────────────────────
 function CalendarPicker({selectedDate,onChange}){
@@ -212,7 +212,7 @@ function ActivityDetailModal({activity,contact,users,onClose,onComplete,onDelete
             <div style={{background:C.tan,borderRadius:8,padding:"12px 14px",marginBottom:12}}>
               <div style={{fontSize:10,fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:0.5,marginBottom:6}}>Contact</div>
               <div style={{display:"flex",alignItems:"center",gap:10}}>
-                <div style={{width:34,height:34,borderRadius:"50%",background:avatarColor(contact.first_name),color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700}}>{contact.first_name?.[0]}{contact.last_name?.[0]}</div>
+                <div style={{width:34,height:34,borderRadius:"50%",background:avatarColor(contact.first_name),color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700}}>{(contact.first_name&&contact.first_name[0])}{(contact.last_name&&contact.last_name[0])}</div>
                 <div>
                   <div style={{fontSize:13,fontWeight:700,color:C.dark}}>{contact.first_name} {contact.last_name}</div>
                   <div style={{fontSize:11.5,color:C.sub}}>{contact.service_type} · {contact.phone||"No phone"}</div>
@@ -231,8 +231,8 @@ function ActivityDetailModal({activity,contact,users,onClose,onComplete,onDelete
             </div>
             <div style={{background:"#fff",border:`1px solid ${C.border}`,borderRadius:8,padding:"10px 12px"}}>
               <div style={{fontSize:10,fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>Assigned To</div>
-              <div style={{fontSize:12.5,fontWeight:700,color:C.dark}}>{assignedUser?.full_name||"Unassigned"}</div>
-              <div style={{fontSize:11.5,color:C.sub,marginTop:2,textTransform:"capitalize"}}>{assignedUser?.role||""}</div>
+              <div style={{fontSize:12.5,fontWeight:700,color:C.dark}}>{(assignedUser&&assignedUser.full_name)||"Unassigned"}</div>
+              <div style={{fontSize:11.5,color:C.sub,marginTop:2,textTransform:"capitalize"}}>{(assignedUser&&assignedUser.role)||""}</div>
             </div>
           </div>
 
@@ -372,7 +372,7 @@ function ReassignModal({contacts,users,onSave,onClose}){
                   <div style={{width:18,height:18,borderRadius:4,border:`2px solid ${selectedIds.includes(c.id)?C.rust:C.border}`,background:selectedIds.includes(c.id)?C.rust:"#fff",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
                     {selectedIds.includes(c.id)&&<span style={{color:"#fff",fontSize:12,fontWeight:700}}>✓</span>}
                   </div>
-                  <div style={{width:28,height:28,borderRadius:"50%",background:avatarColor(c.first_name),color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,flexShrink:0}}>{c.first_name?.[0]}{c.last_name?.[0]}</div>
+                  <div style={{width:28,height:28,borderRadius:"50%",background:avatarColor(c.first_name),color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,flexShrink:0}}>{(c.first_name&&c.first_name[0])}{(c.last_name&&c.last_name[0])}</div>
                   <div>
                     <div style={{fontSize:12.5,fontWeight:600,color:C.dark}}>{c.first_name} {c.last_name}</div>
                     <div style={{fontSize:11,color:C.sub}}>{c.service_type}</div>
@@ -498,21 +498,21 @@ function NewContactModal({userId,users,onSave,onClose}){
 function CalendarView({activities, contacts, users, dbUser, onActivityClick, onNewActivity, onReschedule}){
   const [calView, setCalView] = React.useState("month");
   const [currentDate, setCurrentDate] = React.useState(new Date());
-  const [repFilter, setRepFilter] = React.useState(dbUser?.id||"mine");
-  const [showRepPanel, setShowRepPanel] = React.useState(dbUser?.role==="manager"||dbUser?.role==="admin");
+  const [repFilter, setRepFilter] = React.useState((dbUser&&dbUser.id)||"mine");
+  const [showRepPanel, setShowRepPanel] = React.useState((dbUser&&dbUser.role)==="manager"||(dbUser&&dbUser.role)==="admin");
 
-  const isManager = dbUser?.role==="manager"||dbUser?.role==="admin";
+  const isManager = (dbUser&&dbUser.role)==="manager"||(dbUser&&dbUser.role)==="admin";
 
   const filtered = (activities||[]).filter(a => {
-    if(repFilter==="mine") return a.assigned_user_id===dbUser?.id;
+    if(repFilter==="mine") return a.assigned_user_id===(dbUser&&dbUser.id);
     if(repFilter==="all") return true;
     return a.assigned_user_id===repFilter;
   });
 
   const selectedRep = users.find(u=>u.id===repFilter)||dbUser;
 
-  const getContact = id => contacts?.find(c=>c.id===id);
-  const getUser = id => users?.find(u=>u.id===id);
+  const getContact = id => (contacts&&contacts.find)(c=>c.id===id);
+  const getUser = id => (users&&users.find)(u=>u.id===id);
 
   // Roll overdue incomplete activities to today
   const rollOverdue = React.useCallback(async() => {
@@ -621,7 +621,7 @@ function CalendarView({activities, contacts, users, dbUser, onActivityClick, onN
           {TYPE_ICONS[activity.type]} {activity.subject}
         </div>
         {!compact&&contact&&<div style={{fontSize:9.5,color:C.sub,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{contact.first_name} {contact.last_name}</div>}
-        {!compact&&assignedUser&&assignedUser.id!==dbUser?.id&&<div style={{fontSize:9,color:C.indigo,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>→ {assignedUser.full_name}</div>}
+        {!compact&&assignedUser&&assignedUser.id!==(dbUser&&dbUser.id)&&<div style={{fontSize:9,color:C.indigo,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>→ {assignedUser.full_name}</div>}
       </div>
     );
   };
@@ -654,11 +654,11 @@ function CalendarView({activities, contacts, users, dbUser, onActivityClick, onN
                 onMouseEnter={e=>{if(date)e.currentTarget.style.background=today?"#FFE8E0":"#F9F6EF"}}
                 onMouseLeave={e=>{if(date)e.currentTarget.style.background=today?"#FFF5F2":"#fff"}}>
                 {date&&(
-                  <>
+                  <React.Fragment>
                     <div style={{fontSize:12,fontWeight:today?800:500,color:today?C.rust:C.text,marginBottom:3,width:22,height:22,borderRadius:"50%",background:today?C.rust:"transparent",display:"flex",alignItems:"center",justifyContent:"center",color:today?"#fff":C.text}}>{date.getDate()}</div>
                     {acts.slice(0,3).map(a=><EventChip key={a.id} activity={a} compact/>)}
                     {acts.length>3&&<div style={{fontSize:9,color:C.sub,fontWeight:600}}>+{acts.length-3} more</div>}
-                  </>
+                  </React.Fragment>
                 )}
               </div>
             );
@@ -774,7 +774,7 @@ function CalendarView({activities, contacts, users, dbUser, onActivityClick, onN
           <div style={{display:"flex",gap:8,alignItems:"center"}}>
             {/* Viewing label */}
             <div style={{fontSize:12,fontWeight:600,color:C.sub,padding:"6px 10px",background:C.tan,borderRadius:7,border:`1px solid ${C.border}`}}>
-              👤 {repFilter===dbUser?.id||repFilter==="mine" ? "My Calendar" : (users.find(u=>u.id===repFilter)?.full_name||"Team")}
+              👤 {repFilter===(dbUser&&dbUser.id)||repFilter==="mine" ? "My Calendar" : ((users.find(u=>u.id===repFilter)||{full_name:"Team"}).full_name)}
             </div>
             {isManager&&(
               <button onClick={()=>setShowRepPanel(p=>!p)}
@@ -805,21 +805,21 @@ function CalendarView({activities, contacts, users, dbUser, onActivityClick, onN
             <div style={{padding:"12px 14px 8px",fontSize:11,fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:0.5}}>Team Members</div>
             
             {/* My own calendar */}
-            <button onClick={()=>setRepFilter(dbUser?.id)}
-              style={{display:"flex",alignItems:"center",gap:9,padding:"10px 14px",border:"none",background:repFilter===dbUser?.id?"#fff":"transparent",cursor:"pointer",textAlign:"left",borderRight:repFilter===dbUser?.id?`3px solid ${C.rust}`:"3px solid transparent"}}>
+            <button onClick={()=>setRepFilter((dbUser&&dbUser.id))}
+              style={{display:"flex",alignItems:"center",gap:9,padding:"10px 14px",border:"none",background:repFilter===(dbUser&&dbUser.id)?"#fff":"transparent",cursor:"pointer",textAlign:"left",borderRight:repFilter===(dbUser&&dbUser.id)?`3px solid ${C.rust}`:"3px solid transparent"}}>
               <div style={{width:30,height:30,borderRadius:"50%",background:C.rust,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,flexShrink:0}}>
-                {dbUser?.full_name?.split(" ").map(n=>n[0]).join("").slice(0,2)||"ME"}
+                {(dbUser&&dbUser.full_name?dbUser.full_name.split(" ").map(n=>n[0]).join("").slice(0,2):"ME")}
               </div>
               <div>
                 <div style={{fontSize:12.5,fontWeight:700,color:C.dark}}>Me</div>
-                <div style={{fontSize:10.5,color:C.sub}}>{(activities||[]).filter(a=>a.assigned_user_id===dbUser?.id).length} activities</div>
+                <div style={{fontSize:10.5,color:C.sub}}>{(activities||[]).filter(a=>a.assigned_user_id===(dbUser&&dbUser.id)).length} activities</div>
               </div>
             </button>
 
             <div style={{height:1,background:C.border,margin:"6px 0"}}/>
 
             {/* Each rep */}
-            {users.filter(u=>u.id!==dbUser?.id).map(u=>{
+            {users.filter(u=>u.id!==(dbUser&&dbUser.id)).map(u=>{
               const count=(activities||[]).filter(a=>a.assigned_user_id===u.id).length;
               const ac=avatarColor(u.full_name);
               const isSelected=repFilter===u.id;
@@ -827,10 +827,10 @@ function CalendarView({activities, contacts, users, dbUser, onActivityClick, onN
                 <button key={u.id} onClick={()=>setRepFilter(u.id)}
                   style={{display:"flex",alignItems:"center",gap:9,padding:"10px 14px",border:"none",background:isSelected?"#fff":"transparent",cursor:"pointer",textAlign:"left",borderRight:isSelected?`3px solid ${C.rust}`:"3px solid transparent"}}>
                   <div style={{width:30,height:30,borderRadius:"50%",background:ac,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,flexShrink:0}}>
-                    {u.full_name?.split(" ").map(n=>n[0]).join("").slice(0,2)||"?"}
+                    {(u.full_name&&u.full_name.split)(" ").map(n=>n[0]).join("").slice(0,2)||"?"}
                   </div>
                   <div>
-                    <div style={{fontSize:12.5,fontWeight:700,color:C.dark}}>{u.full_name?.split(" ")[0]}</div>
+                    <div style={{fontSize:12.5,fontWeight:700,color:C.dark}}>{(u.full_name&&u.full_name.split)(" ")[0]}</div>
                     <div style={{fontSize:10,color:C.sub,textTransform:"capitalize"}}>{u.role} · {count} activities</div>
                   </div>
                 </button>
@@ -891,8 +891,8 @@ function PipelineView({contacts,users,dbUser,onSelectContact}){
 
   const filtered = contacts2.filter(c=>{
     const typeMatch = pipelineType==="roofing"
-      ? c.service_type?.toLowerCase().includes("roof")
-      : !c.service_type?.toLowerCase().includes("roof");
+      ? (c.service_type&&c.service_type.toLowerCase)().includes("roof")
+      : !(c.service_type&&c.service_type.toLowerCase)().includes("roof");
     const repMatch = repFilter==="all" || c.assigned_rep_id===repFilter;
     return typeMatch && repMatch;
   });
@@ -995,14 +995,14 @@ function PipelineView({contacts,users,dbUser,onSelectContact}){
                       onMouseEnter={e=>e.currentTarget.style.boxShadow="0 3px 10px rgba(0,0,0,0.12)"}
                       onMouseLeave={e=>e.currentTarget.style.boxShadow="0 1px 3px rgba(0,0,0,0.06)"}>
                       <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:6}}>
-                        <div style={{width:28,height:28,borderRadius:"50%",background:avatarColor(c.first_name),color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,flexShrink:0}}>{c.first_name?.[0]}{c.last_name?.[0]}</div>
+                        <div style={{width:28,height:28,borderRadius:"50%",background:avatarColor(c.first_name),color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,flexShrink:0}}>{(c.first_name&&c.first_name[0])}{(c.last_name&&c.last_name[0])}</div>
                         <div style={{minWidth:0}}>
                           <div style={{fontSize:12,fontWeight:700,color:C.dark,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{c.first_name} {c.last_name}</div>
                           <div style={{fontSize:10,color:C.sub,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{c.service_type||"—"}</div>
                         </div>
                       </div>
                       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                        <span style={{fontSize:10,color:C.sub}}>{users.find(u=>u.id===c.assigned_rep_id)?.full_name?.split(" ")[0]||"?"}</span>
+                        <span style={{fontSize:10,color:C.sub}}>{((users.find(u=>u.id===c.assigned_rep_id)||{full_name:"?"}).full_name||"?").split(" ")[0]||"?"}</span>
                         <span style={{fontSize:11.5,fontWeight:700,color:C.sage}}>${(c.estimated_value||0).toLocaleString()}</span>
                       </div>
                       {c.phone&&<div style={{fontSize:10,color:C.muted,marginTop:4}}>📞 {c.phone}</div>}
@@ -1025,14 +1025,14 @@ function EditActivityModal({activity, contacts, users, dbUser, onSave, onDelete,
     type: activity.type||"call",
     subject: activity.subject||"",
     contact_id: activity.contact_id||"",
-    assigned_user_id: activity.assigned_user_id||dbUser?.id,
+    assigned_user_id: activity.assigned_user_id||(dbUser&&dbUser.id),
   });
   const [pickedDate, setPickedDate] = React.useState(activity.due_date ? new Date(activity.due_date) : new Date());
   const [dateTab, setDateTab] = React.useState("date");
   const [saving, setSaving] = React.useState(false);
   const [confirmDelete, setConfirmDelete] = React.useState(false);
   const [deleting, setDeleting] = React.useState(false);
-  const isAdmin = dbUser?.role==="admin";
+  const isAdmin = (dbUser&&dbUser.role)==="admin";
   const s = k => e => setF(p=>({...p,[k]:e.target.value}));
 
   const h12 = pickedDate.getHours()%12||12;
@@ -1118,7 +1118,7 @@ function EditActivityModal({activity, contacts, users, dbUser, onSave, onDelete,
           {/* Delete section — Admin only */}
           {isAdmin&&(
             <div style={{background:"#FFF5F5",border:"1px solid #F5C4C4",borderRadius:8,padding:"14px 16px",marginTop:4}}>
-              <div style={{fontSize:12,fontWeight:700,color:"#8B2020",marginBottom:8}}>⚠️ Danger Zone — Admin Only</div>
+              <div style={{fontSize:12,fontWeight:700,color:"#8B2020",marginBottom:8}}>⚠ Danger Zone — Admin Only</div>
               {!confirmDelete?(
                 <button onClick={()=>setConfirmDelete(true)}
                   style={{background:"#8B2020",color:"#fff",border:"none",borderRadius:7,padding:"8px 16px",fontSize:12.5,fontWeight:700,cursor:"pointer"}}>
@@ -1344,8 +1344,8 @@ function GutterProposalModal({contact, dbUser, onSave, onClose}){
   const finalPrice = useManualPrice && manualPrice ? parseFloat(manualPrice)||0 : totalPrice;
   const s = k => e => setForm(p=>({...p,[k]:e.target.value}));
 
-  const repName = dbUser?.full_name||"";
-  const repPhone = dbUser?.phone||"";
+  const repName = (dbUser&&dbUser.full_name)||"";
+  const repPhone = (dbUser&&dbUser.phone)||"";
   const today = new Date().toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"});
 
   const saveProposal = async() => {
@@ -1354,7 +1354,7 @@ function GutterProposalModal({contact, dbUser, onSave, onClose}){
       // Save to proposals table
       const proposalData = {
         contact_id: contact.id,
-        created_by: dbUser?.id,
+        created_by: (dbUser&&dbUser.id),
         status: signature ? "Signed" : "Draft",
         total_amount: finalPrice,
         proposal_data: JSON.parse(JSON.stringify({
@@ -1429,7 +1429,7 @@ function GutterProposalModal({contact, dbUser, onSave, onClose}){
               <ProposalEmailDraft contact={contact} proposalLink={proposalLink} repName={repName} onClose={()=>{}}/>
             ):(
               <div style={{background:"#FFF9EC",border:`1px solid #E8D7A8`,borderRadius:6,padding:"8px 12px",fontSize:12,color:C.gold}}>
-                ⚠️ No email on file — copy the link and share it manually
+                ⚠ No email on file — copy the link and share it manually
               </div>
             )}
           </div>
@@ -1519,7 +1519,7 @@ function GutterProposalModal({contact, dbUser, onSave, onClose}){
               <img src={contact.house_photo} alt="House" style={{width:"100%",maxHeight:160,objectFit:"cover",borderRadius:8,border:`1px solid ${C.border}`,marginBottom:6}}/>
             ):(
               <div style={{border:`2px dashed ${C.border}`,borderRadius:8,padding:"10px",textAlign:"center",background:C.tan,cursor:"pointer"}}
-                onClick={()=>document.getElementById("proposalPhotoInput")?.click()}>
+                onClick={()=>document.getElementById("proposalPhotoInput")&&document.getElementById("proposalPhotoInput").click()}>
                 <div style={{fontSize:20,marginBottom:4}}>📷</div>
                 <div style={{fontSize:12,color:C.sub}}>Tap to add house photo</div>
                 <input id="proposalPhotoInput" type="file" accept="image/*" capture="environment" style={{display:"none"}}
@@ -1632,7 +1632,7 @@ function GutterProposalModal({contact, dbUser, onSave, onClose}){
                   to: contact.email,
                   toName: `${contact.first_name} ${contact.last_name}`,
                   subject: `Your S&S Contracting Proposal`,
-                  text: `Hi ${contact.first_name},\n\nThank you for the opportunity to provide you with a proposal!\n\nClick the link below to view your proposal, review the details, and sign to accept:\n\n${link}\n\nIf you have any questions please don't hesitate to reach out.\n\nBest regards,\n${dbUser?.full_name||"S&S Contracting"}\nS&S Contracting Company LLC\n(405) 201-4139`,
+                  text: `Hi ${contact.first_name},\n\nThank you for the opportunity to provide you with a proposal!\n\nClick the link below to view your proposal, review the details, and sign to accept:\n\n${link}\n\nIf you have any questions please don't hesitate to reach out.\n\nBest regards,\n${(dbUser&&dbUser.full_name)||"S&S Contracting"}\nS&S Contracting Company LLC\n(405) 201-4139`,
                 });
                 alert("Proposal link emailed to " + contact.email + "!");
               }} style={{padding:"8px 14px",background:"#C2562F",color:"#fff",border:"none",borderRadius:6,fontSize:12,fontWeight:700,cursor:"pointer"}}>
@@ -1966,7 +1966,7 @@ function EmailHistoryTab({contactId}){
             <div style={{fontSize:13,fontWeight:700,color:C.dark}}>{e.subject}</div>
             <div style={{fontSize:10.5,color:C.muted,flexShrink:0,marginLeft:8}}>{new Date(e.sent_at).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}</div>
           </div>
-          <div style={{fontSize:11.5,color:C.sub,lineHeight:1.4,whiteSpace:"pre-line"}}>{e.body?.slice(0,150)}{e.body?.length>150?"…":""}</div>
+          <div style={{fontSize:11.5,color:C.sub,lineHeight:1.4,whiteSpace:"pre-line"}}>{(e.body&&e.body.slice)(0,150)}{(e.body&&e.body.length)>150?"…":""}</div>
         </div>
       ))}
     </div>
@@ -2008,7 +2008,7 @@ If you have any questions before your project begins, please don't hesitate to r
 We look forward to working with you!
 
 Warm regards,
-${dbUser?.full_name||""}
+${(dbUser&&dbUser.full_name)||""}
 S&S Contracting Company LLC
 (405) 201-4139
 sandscontractingco.com`
@@ -2024,7 +2024,7 @@ At S&S Contracting Company LLC, we specialize in Roofing, Gutters, and Outdoor L
 I'd be happy to schedule a free inspection and estimate at your convenience. Please feel free to reach out anytime!
 
 Best regards,
-${dbUser?.full_name||""}
+${(dbUser&&dbUser.full_name)||""}
 S&S Contracting Company LLC
 (405) 201-4139`
     },
@@ -2039,7 +2039,7 @@ Please find your proposal attached. I'd love to answer any questions you may hav
 To accept this proposal, simply reply to this email or give me a call and we can get you scheduled right away!
 
 Best regards,
-${dbUser?.full_name||""}
+${(dbUser&&dbUser.full_name)||""}
 S&S Contracting Company LLC
 (405) 201-4139`
     },
@@ -2054,7 +2054,7 @@ If you need to reschedule or have any questions, please don't hesitate to reach 
 We look forward to seeing you!
 
 Best regards,
-${dbUser?.full_name||""}
+${(dbUser&&dbUser.full_name)||""}
 S&S Contracting Company LLC
 (405) 201-4139`
     },
@@ -2069,7 +2069,7 @@ There's absolutely no obligation — we just want to make sure your home is prot
 Would you be available this week? Just reply to this email or call me directly.
 
 Best regards,
-${dbUser?.full_name||""}
+${(dbUser&&dbUser.full_name)||""}
 S&S Contracting Company LLC
 (405) 201-4139`
     }
@@ -2092,7 +2092,7 @@ S&S Contracting Company LLC
   const logEmail = async() => {
     await sb.from("emails").insert({
       contact_id: contact.id,
-      sent_by: dbUser?.id,
+      sent_by: (dbUser&&dbUser.id),
       subject: subject,
       body: body,
       sent_at: new Date().toISOString(),
@@ -2108,17 +2108,16 @@ S&S Contracting Company LLC
         toName: `${contact.first_name} ${contact.last_name}`,
         subject,
         text: body,
-        html: `<div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.6;color:#333;max-width:600px;margin:0 auto;">
-          <div style="background:#2E2A21;padding:16px 20px;border-radius:8px 8px 0 0;display:flex;align-items:center;gap:12px;">
-            <div style="font-size:18px;font-weight:800;color:#fff;">S&amp;S Contracting Company LLC</div>
-          </div>
-          <div style="padding:24px 20px;background:#fff;border:1px solid #ddd;border-top:none;">
-            ${body.split("\n").map(line=>line.trim()?`<p style="margin:0 0 10px;">${line}</p>`:"<br/>").join("")}
-          </div>
-          <div style="background:#F7F3E9;padding:12px 20px;border-radius:0 0 8px 8px;font-size:11px;color:#888;border:1px solid #ddd;border-top:none;">
-            S&S Contracting Company LLC · 12200 Del Norte Way, Yukon, OK 73099 · (405) 201-4139 · sandscontractingco.com
-          </div>
-        </div>`,
+                  html: "<div style=\"font-family:Arial,sans-serif;font-size:14px;line-height:1.6;color:#333;max-width:600px;margin:0 auto;\">" +
+            "<div style=\"background:#2E2A21;padding:16px 24px;border-bottom:3px solid #4169E1;\">" +
+            "<div style=\"font-size:18px;font-weight:800;color:#fff;\">S&S Contracting Company LLC</div>" +
+            "<div style=\"font-size:11px;color:#A9A18E;margin-top:2px;\">Roofing - Gutters - Outdoor Living</div></div>" +
+            "<div style=\"padding:24px;background:#fff;border:1px solid #ddd;border-top:none;\">" +
+            "<p><a href=\"" + proposalLink + "\" style=\"display:inline-block;background:#C2562F;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px;\">View and Sign My Proposal</a></p>" +
+            body.split("\n").filter(l=>!l.includes(proposalLink)).map(l=>l.trim()?"<p style=\"margin:0 0 10px;\">"+l+"</p>":"<br/>").join("") +
+            "</div><div style=\"background:#F7F3E9;padding:12px 20px;font-size:11px;color:#888;border:1px solid #ddd;border-top:none;\">" +
+            "S&S Contracting Company LLC - 12200 Del Norte Way, Yukon, OK 73099 - (405) 201-4139" +
+            "</div></div>",
       });
       await logEmail();
       setSent(true);
@@ -2163,7 +2162,7 @@ S&S Contracting Company LLC
             {/* No email warning */}
             {!contact.email&&(
               <div style={{background:"#FFF9EC",border:`1px solid #E8D7A8`,borderRadius:8,padding:"10px 14px",fontSize:12.5,color:C.gold,fontWeight:600}}>
-                ⚠️ No email address on file for this contact. Add one in Edit Contact first.
+                ⚠ No email address on file for this contact. Add one in Edit Contact first.
               </div>
             )}
 
@@ -2200,7 +2199,7 @@ S&S Contracting Company LLC
 
         {!sent&&(
           <div style={{padding:"12px 20px 20px",display:"flex",gap:10,borderTop:`1px solid ${C.border}`}}>
-            {error&&<div style={{background:"#FFF0ED",border:"1px solid #F5C4B8",borderRadius:7,padding:"9px 12px",fontSize:12,color:"#8B2020",marginBottom:4}}>⚠️ {error}</div>}
+            {error&&<div style={{background:"#FFF0ED",border:"1px solid #F5C4B8",borderRadius:7,padding:"9px 12px",fontSize:12,color:"#8B2020",marginBottom:4}}>{error}</div>}
             <Btn primary onClick={handleOpenEmail} disabled={!contact.email||sending} style={{flex:1,justifyContent:"center",padding:"11px",fontSize:13}}>
               {sending?"📨 Sending…":"📧 Send Email"}
             </Btn>
@@ -2259,12 +2258,12 @@ function RoofProposalModal({contact, dbUser, onSave, onClose}){
       type:"roof",
       lines, scopeItems, permitFee, attn, notes,
       signature, totalCost, netTotal,
-      rep_name: dbUser?.full_name||"",
-      rep_phone: dbUser?.phone||"",
+      rep_name: (dbUser&&dbUser.full_name)||"",
+      rep_phone: (dbUser&&dbUser.phone)||"",
     };
     const {data,error} = await sb.from("proposals").insert({
       contact_id: contact.id,
-      created_by: dbUser?.id,
+      created_by: (dbUser&&dbUser.id),
       status: signature?"Signed":"Draft",
       total_amount: netTotal,
       proposal_data: JSON.parse(JSON.stringify(proposalData)),
@@ -2310,7 +2309,7 @@ function RoofProposalModal({contact, dbUser, onSave, onClose}){
       <div style="display:flex;align-items:center;gap:14px;">
         <img src="${SS_LOGO}" class="logo" alt="Logo"/>
         <div>
-          <div class="company">S&amp;S Contracting Company LLC</div>
+          <div class="company">S&S Contracting Company LLC</div>
           <div class="company-sub">Roofing · Gutters · Outdoor Living</div>
           <div class="company-addr">12200 Del Norte Way, Yukon, OK 73099</div>
           <div class="company-addr">(405) 201-4139</div>
@@ -2369,9 +2368,9 @@ function RoofProposalModal({contact, dbUser, onSave, onClose}){
               <button onClick={()=>{navigator.clipboard.writeText(proposalLink);alert("Link copied!");}} style={{padding:"8px 14px",background:C.sage,color:"#fff",border:"none",borderRadius:6,fontSize:12,fontWeight:700,cursor:"pointer"}}>📋 Copy</button>
             </div>
             {contact.email?(
-              <ProposalEmailDraft contact={contact} proposalLink={proposalLink} repName={dbUser?.full_name||"S&S Contracting"} onClose={()=>{}}/>
+              <ProposalEmailDraft contact={contact} proposalLink={proposalLink} repName={(dbUser&&dbUser.full_name)||"S&S Contracting"} onClose={()=>{}}/>
             ):(
-              <div style={{background:"#FFF9EC",border:`1px solid #E8D7A8`,borderRadius:6,padding:"8px 12px",fontSize:12,color:C.gold}}>⚠️ No email on file — copy the link and share manually</div>
+              <div style={{background:"#FFF9EC",border:`1px solid #E8D7A8`,borderRadius:6,padding:"8px 12px",fontSize:12,color:C.gold}}>No email on file — copy the link and share manually</div>
             )}
           </div>
           <Btn onClick={onClose} style={{width:"100%",justifyContent:"center",padding:"11px"}}>Done</Btn>
@@ -2510,7 +2509,7 @@ function RoofProposalModal({contact, dbUser, onSave, onClose}){
               <button onClick={async()=>{
                 const link=`${window.location.origin}?token=${savedToken}`;
                 await sendEmailViaResend({to:contact.email,toName:`${contact.first_name} ${contact.last_name}`,subject:`Your S&S Contracting Proposal`,
-                  text:`Hi ${contact.first_name},\n\nPlease click the link below to view and sign your proposal:\n\n${link}\n\nBest regards,\n${dbUser?.full_name||"S&S Contracting"}\n(405) 201-4139`});
+                  text:`Hi ${contact.first_name},\n\nPlease click the link below to view and sign your proposal:\n\n${link}\n\nBest regards,\n${(dbUser&&dbUser.full_name)||"S&S Contracting"}\n(405) 201-4139`});
                 alert("Emailed to "+contact.email+"!");
               }} style={{padding:"8px 14px",background:"#C2562F",color:"#fff",border:"none",borderRadius:6,fontSize:12,fontWeight:700,cursor:"pointer"}}>📧 Email</button>
             </div>
@@ -2553,9 +2552,9 @@ function MiscProposalModal({contact, dbUser, onSave, onClose}){
 
   const save = async() => {
     setSaving(true);
-    const proposalData = {type:"misc",lines,scopeItems,permitFee,attn,jobTime,deposit,notes,signature,totalCost,netTotal,rep_name:dbUser?.full_name||"",rep_phone:dbUser?.phone||""};
+    const proposalData = {type:"misc",lines,scopeItems,permitFee,attn,jobTime,deposit,notes,signature,totalCost,netTotal,rep_name:(dbUser&&dbUser.full_name)||"",rep_phone:(dbUser&&dbUser.phone)||""};
     const {data,error} = await sb.from("proposals").insert({
-      contact_id:contact.id,created_by:dbUser?.id,
+      contact_id:contact.id,created_by:(dbUser&&dbUser.id),
       status:signature?"Signed":"Draft",total_amount:netTotal,
       proposal_data:JSON.parse(JSON.stringify(proposalData)),
     }).select().single();
@@ -2587,7 +2586,7 @@ function MiscProposalModal({contact, dbUser, onSave, onClose}){
     <div class="header">
       <div style="display:flex;align-items:center;gap:14px;">
         <img src="${SS_LOGO}" class="logo" alt="Logo"/>
-        <div><div class="company">S&amp;S Contracting Company LLC</div>
+        <div><div class="company">S&S Contracting Company LLC</div>
         <div class="company-sub">Roofing · Gutters · Outdoor Living</div>
         <div class="company-addr">12200 Del Norte Way, Yukon, OK 73099</div>
         <div class="company-addr">(405) 201-4139</div></div>
@@ -2763,13 +2762,13 @@ function EditContactModal({contact, users, dbUser, onSave, onDelete, onClose}){
     status: contact.status||"New Lead",
     source: contact.source||"Manual Entry",
     estimated_value: contact.estimated_value||"",
-    assigned_rep_id: contact.assigned_rep_id||dbUser?.id,
+    assigned_rep_id: contact.assigned_rep_id||(dbUser&&dbUser.id),
   });
   const [saving, setSaving] = React.useState(false);
   const [confirmDelete, setConfirmDelete] = React.useState(false);
   const [deleting, setDeleting] = React.useState(false);
   const [err, setErr] = React.useState("");
-  const isAdmin = dbUser?.role==="admin";
+  const isAdmin = (dbUser&&dbUser.role)==="admin";
   const s = k => e => setF(p=>({...p,[k]:e.target.value}));
 
   const save = async () => {
@@ -2802,7 +2801,7 @@ function EditContactModal({contact, users, dbUser, onSave, onDelete, onClose}){
         {/* Header */}
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"15px 20px",borderBottom:`1px solid ${C.border}`}}>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
-            <div style={{width:32,height:32,borderRadius:"50%",background:avatarColor(contact.first_name),color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700}}>{contact.first_name?.[0]}{contact.last_name?.[0]}</div>
+            <div style={{width:32,height:32,borderRadius:"50%",background:avatarColor(contact.first_name),color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700}}>{(contact.first_name&&contact.first_name[0])}{(contact.last_name&&contact.last_name[0])}</div>
             <span style={{fontSize:14,fontWeight:700,color:C.dark}}>Edit Contact</span>
           </div>
           <button onClick={onClose} style={{background:"none",border:"none",cursor:"pointer",fontSize:18,color:C.muted}}>✕</button>
@@ -2840,7 +2839,7 @@ function EditContactModal({contact, users, dbUser, onSave, onDelete, onClose}){
           {/* Delete section — Admin only */}
           {isAdmin&&(
             <div style={{background:"#FFF5F5",border:"1px solid #F5C4C4",borderRadius:8,padding:"14px 16px",marginTop:4}}>
-              <div style={{fontSize:12,fontWeight:700,color:"#8B2020",marginBottom:8}}>⚠️ Danger Zone — Admin Only</div>
+              <div style={{fontSize:12,fontWeight:700,color:"#8B2020",marginBottom:8}}>⚠ Danger Zone — Admin Only</div>
               {!confirmDelete?(
                 <button onClick={()=>setConfirmDelete(true)}
                   style={{background:"#8B2020",color:"#fff",border:"none",borderRadius:7,padding:"8px 16px",fontSize:12.5,fontWeight:700,cursor:"pointer"}}>
@@ -3019,7 +3018,7 @@ function PublicProposalViewer(){
           <div style={{padding:"20px 28px"}}>
             {/* Gutter proposal */}
             {isGutter&&(
-              <>
+              <React.Fragment>
                 <div style={{fontSize:11,fontWeight:700,color:"#8A8170",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:10}}>Measurements</div>
                 <table style={{width:"100%",borderCollapse:"collapse",marginBottom:16}}>
                   <thead><tr style={{background:"#2E2A21"}}>
@@ -3041,12 +3040,12 @@ function PublicProposalViewer(){
                   </tbody>
                 </table>
                 {pd.diagram&&<div style={{marginBottom:16}}><img src={pd.diagram} style={{width:"100%",border:"1px solid #EAE3D1",borderRadius:8}}/></div>}
-              </>
+              </React.Fragment>
             )}
 
             {/* Roof & Misc proposal line items */}
             {(isRoof||isMisc)&&pd.lines&&pd.lines.length>0&&(
-              <>
+              <React.Fragment>
                 <div style={{fontSize:11,fontWeight:700,color:"#8A8170",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:10}}>Description</div>
                 <table style={{width:"100%",borderCollapse:"collapse",marginBottom:16}}>
                   <thead><tr style={{background:"#2E2A21"}}>
@@ -3071,7 +3070,7 @@ function PublicProposalViewer(){
                     ))}
                   </div>
                 )}
-              </>
+              </React.Fragment>
             )}
 
             {/* Notes */}
@@ -3085,7 +3084,7 @@ function PublicProposalViewer(){
             {/* Pricing */}
             <div style={{background:"#2E2A21",borderRadius:10,padding:"16px 20px",marginBottom:20}}>
               {isGutter&&(
-                <>
+                <React.Fragment>
                   <div style={{display:"flex",justifyContent:"space-between",fontSize:12.5,color:"rgba(255,255,255,0.65)",marginBottom:6}}>
                     <span>Gutter ({pd.gutter_ft||0} ft × $7.50/ft)</span>
                     <span>${((parseFloat(pd.gutter_ft)||0)*7.5).toFixed(2)}</span>
@@ -3094,10 +3093,10 @@ function PublicProposalViewer(){
                     <span>Downspouts ({pd.downspouts||0} × $97.50)</span>
                     <span>${((parseFloat(pd.downspouts)||0)*97.5).toFixed(2)}</span>
                   </div>
-                </>
+                </React.Fragment>
               )}
               {(isRoof||isMisc)&&pd.lines&&(
-                <>
+                <React.Fragment>
                   <div style={{display:"flex",justifyContent:"space-between",fontSize:12.5,color:"rgba(255,255,255,0.65)",marginBottom:6}}>
                     <span>Subtotal</span>
                     <span>${(pd.totalCost||0).toLocaleString(undefined,{minimumFractionDigits:2})}</span>
@@ -3108,7 +3107,7 @@ function PublicProposalViewer(){
                       <span>${parseFloat(pd.permitFee).toFixed(2)}</span>
                     </div>
                   )}
-                </>
+                </React.Fragment>
               )}
               <div style={{display:"flex",justifyContent:"space-between",fontSize:20,fontWeight:800,color:"#fff",borderTop:"1px solid rgba(255,255,255,0.2)",paddingTop:12,marginTop:4}}>
                 <span>Total</span>
@@ -3119,7 +3118,7 @@ function PublicProposalViewer(){
             {/* Rep info */}
             <div style={{display:"flex",justifyContent:"space-between",marginBottom:24,paddingBottom:16,borderBottom:"1px solid #EAE3D1"}}>
               <div>
-                <div style={{fontSize:13,fontWeight:700,color:"#2E2A21"}}>{pd.rep_name||"S&amp;S Contracting"}</div>
+                <div style={{fontSize:13,fontWeight:700,color:"#2E2A21"}}>{pd.rep_name||"S&S Contracting"}</div>
                 <div style={{fontSize:12,color:"#8A8170"}}>{pd.rep_phone||"(405) 201-4139"}</div>
               </div>
               <div style={{textAlign:"right"}}>
@@ -3198,23 +3197,13 @@ sandscontractingco.com`
         toName: `${contact.first_name} ${contact.last_name}`,
         subject,
         text: body,
-        html: `<div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.6;color:#333;max-width:600px;margin:0 auto;">
-          <div style="background:#2E2A21;padding:16px 24px;border-bottom:3px solid #4169E1;">
-            <div style="font-size:18px;font-weight:800;color:#fff;">S&amp;S Contracting Company LLC</div>
-            <div style="font-size:11px;color:#A9A18E;margin-top:2px;">Roofing · Gutters · Outdoor Living</div>
-          </div>
-          <div style="padding:24px;background:#fff;border:1px solid #ddd;border-top:none;">
-            ${body.split("
-").map(line=>
-              line.includes(proposalLink)
-                ? `<p style="margin:16px 0;"><a href="${proposalLink}" style="display:inline-block;background:#C2562F;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px;">👉 View & Sign My Proposal</a></p>`
-                : line.trim() ? `<p style="margin:0 0 10px;">${line}</p>` : "<br/>"
-            ).join("")}
-          </div>
-          <div style="background:#F7F3E9;padding:12px 24px;font-size:11px;color:#888;border:1px solid #ddd;border-top:none;">
-            S&S Contracting Company LLC · 12200 Del Norte Way, Yukon, OK 73099 · (405) 201-4139 · sandscontractingco.com
-          </div>
-        </div>`,
+        html:"<div style=\"font-family:Arial,sans-serif;font-size:14px;line-height:1.6;color:#333;max-width:600px;margin:0 auto;\">" +
+            "<div style=\"background:#2E2A21;padding:16px 20px;border-bottom:3px solid #4169E1;\">" +
+            "<div style=\"font-size:18px;font-weight:800;color:#fff;\">S&S Contracting Company LLC</div></div>" +
+            "<div style=\"padding:24px 20px;background:#fff;border:1px solid #ddd;border-top:none;\">" +
+            body.split("\n").map(l=>l.trim()?"<p style=\"margin:0 0 10px;\">"+l+"</p>":"<br/>").join("") +
+            "</div><div style=\"background:#F7F3E9;padding:12px 20px;font-size:11px;color:#888;\">" +
+            "S&S Contracting - 12200 Del Norte Way, Yukon, OK 73099 - (405) 201-4139</div></div>",
       });
       setSent(true);
     }catch(e){alert("Could not send: "+e.message);}
@@ -3285,7 +3274,7 @@ function Login({onLogin}){
           <Lbl label="Email"><Inp value={email} onChange={e=>setEmail(e.target.value)} type="email"/></Lbl>
           <Lbl label="Password"><Inp value={pass} onChange={e=>setPass(e.target.value)} type="password" placeholder="Enter your password"/></Lbl>
           <button onClick={doLogin} disabled={loading} style={{padding:"11px",background:C.rust,color:"#fff",border:"none",borderRadius:8,fontSize:14,fontWeight:700,cursor:loading?"not-allowed":"pointer",marginTop:4,display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
-            {loading?<><span className="spin" style={{display:"inline-block",width:16,height:16,border:"2px solid rgba(255,255,255,0.3)",borderTop:"2px solid #fff",borderRadius:"50%"}}/> Signing in…</>:"Sign In →"}
+            {loading?<React.Fragment><span className="spin" style={{display:"inline-block",width:16,height:16,border:"2px solid rgba(255,255,255,0.3)",borderTop:"2px solid #fff",borderRadius:"50%"}}/> Signing in…</React.Fragment>:"Sign In →"}
           </button>
         </div>
       </div>
@@ -3335,7 +3324,7 @@ function App(){
     setContacts(c||[]);
     setActivities(a||[]);
     setUsers(u||[]);
-    if(c?.length>0)setSelected(s=>s||(c[0]));
+    if((c&&c.length)>0)setSelected(s=>s||(c[0]));
   },[]);
 
   const loadNotes=React.useCallback(async(contactId)=>{
@@ -3344,12 +3333,12 @@ function App(){
   },[]);
 
   React.useEffect(()=>{if(session)loadAll();},[session]);
-  React.useEffect(()=>{if(selected){setNotes([]);loadNotes(selected.id);}setEditingStatus(false);},[selected?.id]);
+  React.useEffect(()=>{if(selected){setNotes([]);loadNotes(selected.id);}setEditingStatus(false);},[(selected&&selected.id)]);
 
   const saveNote=async()=>{
     if(!newNote.trim()||!selected)return;
     setSavingNote(true);
-    const {data,error}=await sb.from("notes").insert({contact_id:selected.id,author_id:dbUser?.id||authUser?.id,body:newNote.trim()}).select().single();
+    const {data,error}=await sb.from("notes").insert({contact_id:selected.id,author_id:(dbUser&&dbUser.id)||(authUser&&authUser.id),body:newNote.trim()}).select().single();
     if(!error){setNotes(p=>[data,...p]);setNewNote("");}
     setSavingNote(false);
   };
@@ -3365,7 +3354,7 @@ function App(){
   const completeActivity=async(a)=>{
     await sb.from("activities").update({is_completed:true,completed_at:new Date().toISOString()}).eq("id",a.id);
     setActivities(p=>p.map(x=>x.id===a.id?{...x,is_completed:true}:x));
-    setDoneContact(contacts?.find(c=>c.id===a.contact_id));
+    setDoneContact((contacts&&contacts.find)(c=>c.id===a.contact_id));
     setShowActivityDetail(null);
     setShowDonePrompt(true);
   };
@@ -3383,7 +3372,7 @@ function App(){
   };
 
   const filtered=(contacts||[]).filter(c=>`${c.first_name} ${c.last_name} ${c.service_type||""}`.toLowerCase().includes(search.toLowerCase()));
-  const initials=dbUser?.full_name?.split(" ").map(n=>n[0]).join("").slice(0,2)||"??";
+  const initials=(dbUser&&dbUser.full_name?dbUser.full_name.split(" ").map(n=>n[0]).join("").slice(0,2):"||");
 
   // Check if this is a public proposal link
   const urlToken = new URLSearchParams(window.location.search).get("token");
@@ -3412,8 +3401,8 @@ function App(){
           <div style={{display:"flex",alignItems:"center",gap:7}}>
             <div style={{width:28,height:28,borderRadius:"50%",background:C.rust,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700}}>{initials}</div>
             <div>
-              <div style={{fontSize:12,color:"#F4EFE6",fontWeight:600}}>{dbUser?.full_name||authUser?.email}</div>
-              <div style={{fontSize:9.5,color:C.muted,textTransform:"capitalize"}}>{dbUser?.role||"user"}</div>
+              <div style={{fontSize:12,color:"#F4EFE6",fontWeight:600}}>{(dbUser&&dbUser.full_name)||(authUser&&authUser.email)}</div>
+              <div style={{fontSize:9.5,color:C.muted,textTransform:"capitalize"}}>{(dbUser&&dbUser.role)||"user"}</div>
             </div>
           </div>
           <button onClick={signOut} style={{background:"none",border:"none",cursor:"pointer",color:C.muted,fontSize:12,fontWeight:600}}>⎋ Sign out</button>
@@ -3431,13 +3420,13 @@ function App(){
           <div style={{flex:1}}/>
           <div style={{padding:"10px",background:C.mid,borderRadius:8,margin:"0 2px"}}>
             <div style={{fontSize:9.5,color:C.muted,textTransform:"uppercase",letterSpacing:0.5,marginBottom:7,fontWeight:600}}>Your Data</div>
-            <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:"#E5DECB",padding:"3px 0"}}><span>Contacts</span><strong>{contacts?.length??"…"}</strong></div>
-            <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:"#E5DECB",padding:"3px 0"}}><span>Activities</span><strong>{activities?.length??"…"}</strong></div>
+            <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:"#E5DECB",padding:"3px 0"}}><span>Contacts</span><strong>{(contacts&&contacts.length)||"…"}</strong></div>
+            <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:"#E5DECB",padding:"3px 0"}}><span>Activities</span><strong>{(activities&&activities.length)||"…"}</strong></div>
           </div>
         </nav>
 
         {/* CONTACTS VIEW */}
-        {view==="contacts"&&<>
+        {view==="contacts"&&<React.Fragment>
           {/* Contact List */}
           <div style={{width:264,background:C.tan,borderRight:`1px solid ${C.border}`,display:"flex",flexDirection:"column",flexShrink:0}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"13px 12px 9px"}}>
@@ -3451,10 +3440,10 @@ function App(){
               {contacts===null?<Spinner/>:filtered.length===0?(
                 <div style={{textAlign:"center",padding:"30px 16px",color:C.muted,fontSize:12.5}}>{(contacts||[]).length===0?"No contacts yet. Click + to add your first customer.":"No matches found."}</div>
               ):filtered.map(c=>(
-                <button key={c.id} onClick={()=>setSelected(c)} style={{width:"100%",display:"flex",gap:9,padding:"9px 8px",border:"none",background:selected?.id===c.id?"#fff":"transparent",borderRadius:8,cursor:"pointer",textAlign:"left",marginBottom:2,boxShadow:selected?.id===c.id?"0 1px 4px rgba(58,53,42,0.1)":"none"}}>
+                <button key={c.id} onClick={()=>setSelected(c)} style={{width:"100%",display:"flex",gap:9,padding:"9px 8px",border:"none",background:(selected&&selected.id)===c.id?"#fff":"transparent",borderRadius:8,cursor:"pointer",textAlign:"left",marginBottom:2,boxShadow:(selected&&selected.id)===c.id?"0 1px 4px rgba(58,53,42,0.1)":"none"}}>
                   {c.house_photo
                     ? <img src={c.house_photo} alt="House" style={{width:32,height:32,borderRadius:6,objectFit:"cover",flexShrink:0,border:`1px solid ${C.border}`}}/>
-                    : <div style={{width:32,height:32,borderRadius:"50%",background:avatarColor(c.first_name),color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0}}>{c.first_name?.[0]}{c.last_name?.[0]}</div>
+                    : <div style={{width:32,height:32,borderRadius:"50%",background:avatarColor(c.first_name),color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0}}>{(c.first_name&&c.first_name[0])}{(c.last_name&&c.last_name[0])}</div>
                   }
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{fontSize:12.5,fontWeight:700,color:C.text}}>{c.first_name} {c.last_name}</div>
@@ -3476,9 +3465,9 @@ function App(){
                 {selected.house_photo
                   ? <div style={{position:"relative",flexShrink:0}}>
                       <img src={selected.house_photo} alt="House" style={{width:70,height:54,objectFit:"cover",borderRadius:8,border:`1px solid ${C.border}`,display:"block"}}/>
-                      <div style={{position:"absolute",bottom:-8,right:-8,width:26,height:26,borderRadius:"50%",background:avatarColor(selected.first_name),color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:700,border:"2px solid #fff"}}>{selected.first_name?.[0]}{selected.last_name?.[0]}</div>
+                      <div style={{position:"absolute",bottom:-8,right:-8,width:26,height:26,borderRadius:"50%",background:avatarColor(selected.first_name),color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:700,border:"2px solid #fff"}}>{(selected.first_name&&selected.first_name[0])}{(selected.last_name&&selected.last_name[0])}</div>
                     </div>
-                  : <div style={{width:48,height:48,borderRadius:"50%",background:avatarColor(selected.first_name),color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:700,flexShrink:0}}>{selected.first_name?.[0]}{selected.last_name?.[0]}</div>
+                  : <div style={{width:48,height:48,borderRadius:"50%",background:avatarColor(selected.first_name),color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:700,flexShrink:0}}>{(selected.first_name&&selected.first_name[0])}{(selected.last_name&&selected.last_name[0])}</div>
                 }
                 <div style={{flex:1}}>
                   <div style={{display:"flex",alignItems:"center",gap:9,flexWrap:"wrap"}}>
@@ -3538,7 +3527,7 @@ function App(){
               {/* Owner row */}
               <div style={{padding:"0 22px 12px",display:"flex",alignItems:"center",gap:8}}>
                 <span style={{fontSize:11,color:C.muted,fontWeight:600}}>OWNER:</span>
-                <span style={{fontSize:12.5,color:C.text,fontWeight:600}}>{users.find(u=>u.id===selected.assigned_rep_id)?.full_name||"Unassigned"}</span>
+                <span style={{fontSize:12.5,color:C.text,fontWeight:600}}>{(users.find(u=>u.id===selected.assigned_rep_id)||{full_name:"Unassigned"}).full_name}</span>
                 <button onClick={()=>setShowReassign(true)} style={{background:"none",border:`1px solid ${C.border}`,borderRadius:5,padding:"2px 8px",fontSize:11,color:C.sub,cursor:"pointer",marginLeft:4}}>Change</button>
               </div>
 
@@ -3644,7 +3633,7 @@ function App(){
               {activities===null?<Spinner/>:(activities||[]).length===0
                 ?<div style={{textAlign:"center",padding:"20px 10px",color:C.muted,fontSize:12}}>No activities yet.</div>
                 :(activities||[]).map(a=>{
-                  const contact=contacts?.find(c=>c.id===a.contact_id);
+                  const contact=(contacts&&contacts.find)(c=>c.id===a.contact_id);
                   const assignedUser=users.find(u=>u.id===a.assigned_user_id);
                   const d=a.due_date?new Date(a.due_date):null;
                   return(
@@ -3658,7 +3647,7 @@ function App(){
                       <div style={{minWidth:0,flex:1}}>
                         <div style={{fontSize:11.5,fontWeight:600,lineHeight:1.4,textDecoration:a.is_completed?"line-through":"none",color:a.is_completed?C.muted:C.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{a.subject}</div>
                         {contact&&<div style={{fontSize:10.5,color:C.sage,marginTop:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{contact.first_name} {contact.last_name}</div>}
-                        {assignedUser&&assignedUser.id!==dbUser?.id&&<div style={{fontSize:10,color:C.indigo,marginTop:1}}>→ {assignedUser.full_name}</div>}
+                        {assignedUser&&assignedUser.id!==(dbUser&&dbUser.id)&&<div style={{fontSize:10,color:C.indigo,marginTop:1}}>→ {assignedUser.full_name}</div>}
                         {d&&<div style={{fontSize:10.5,color:C.muted,marginTop:1}}>{MONTHS_SHORT[d.getMonth()]} {d.getDate()} · {d.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}</div>}
                       </div>
                     </div>
@@ -3675,7 +3664,7 @@ function App(){
               <div style={{fontSize:11,color:"#6B5A2A",lineHeight:1.4}}>Meeting reminder emails — Phase 2.</div>
             </div>
           </div>
-        </>}
+        </React.Fragment>}
 
         {/* PIPELINE VIEW */}
         {view==="pipeline"&&<PipelineView contacts={contacts||[]} users={users} dbUser={dbUser} onSelectContact={c=>{setSelected(c);setView("contacts");}}/>}
@@ -3686,7 +3675,7 @@ function App(){
           contacts={contacts||[]}
           users={users}
           dbUser={dbUser}
-          onActivityClick={a=>{setShowActivityDetail(a);const contact=contacts?.find(c=>c.id===a.contact_id);if(contact)setSelected(contact);}}
+          onActivityClick={a=>{setShowActivityDetail(a);const contact=(contacts&&contacts.find)(c=>c.id===a.contact_id);if(contact)setSelected(contact);}}
           onNewActivity={()=>setShowNewActivity(true)}
           onReschedule={updated=>setActivities(p=>p.map(a=>a.id===updated.id?updated:a))}
         />}
@@ -3702,11 +3691,11 @@ function App(){
       </div>
 
       {/* MODALS */}
-      {showNewContact&&<NewContactModal userId={dbUser?.id||authUser?.id} users={users}
+      {showNewContact&&<NewContactModal userId={(dbUser&&dbUser.id)||(authUser&&authUser.id)} users={users}
         onSave={c=>{setContacts(p=>[c,...(p||[])]);setSelected(c);setShowNewContact(false);}}
         onClose={()=>setShowNewContact(false)}/>}
 
-      {showNewActivity&&<NewActivityModal userId={dbUser?.id||authUser?.id} contactId={selected?.id}
+      {showNewActivity&&<NewActivityModal userId={(dbUser&&dbUser.id)||(authUser&&authUser.id)} contactId={(selected&&selected.id)}
         contacts={contacts||[]} users={users}
         onSave={a=>{setActivities(p=>[a,...(p||[])]);setShowNewActivity(false);}}
         onClose={()=>setShowNewActivity(false)}/>}
@@ -3754,7 +3743,7 @@ function App(){
 
       {showActivityDetail&&<ActivityDetailModal
         activity={showActivityDetail}
-        contact={contacts?.find(c=>c.id===showActivityDetail.contact_id)}
+        contact={(contacts&&contacts.find)(c=>c.id===showActivityDetail.contact_id)}
         users={users}
         onClose={()=>setShowActivityDetail(null)}
         onComplete={completeActivity}
