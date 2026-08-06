@@ -1960,7 +1960,7 @@ function EmailHistoryTab({contactId}){
           <div style={{fontSize:13,fontWeight:700,color:C.sub}}>No emails sent yet</div>
           <div style={{fontSize:11.5,marginTop:4}}>Click "Send Email" to email this contact</div>
         </div>
-      ):emails.map(e=>(
+      ):(emails||[]).map(e=>(
         <div key={e.id} style={{background:"#fff",border:`1px solid ${C.border}`,borderRadius:8,padding:"11px 14px",marginBottom:8}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:4}}>
             <div style={{fontSize:13,fontWeight:700,color:C.dark}}>{e.subject}</div>
@@ -2240,7 +2240,7 @@ function RoofProposalModal({contact, dbUser, onSave, onClose}){
   const [saved, setSaved] = React.useState(false);
   const [savedToken, setSavedToken] = React.useState(null);
 
-  const totalCost = lines.reduce((sum,l)=>sum+(parseFloat(l.cost)||0),0);
+  const totalCost = (lines||[]).reduce((sum,l)=>sum+(parseFloat(l.cost)||0),0);
   const permitAmt = parseFloat(permitFee)||0;
   const netTotal = totalCost + permitAmt;
   const today = new Date().toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"});
@@ -2326,9 +2326,9 @@ function RoofProposalModal({contact, dbUser, onSave, onClose}){
     </div>
     <div class="section-title">Description</div>
     <table class="desc-table"><thead><tr><th>Description</th><th>Cost</th></tr></thead><tbody>
-    ${lines.map(l=>`<tr><td>${l.desc}</td><td>$${(parseFloat(l.cost)||0).toLocaleString(undefined,{minimumFractionDigits:2})}</td></tr>`).join("")}
+    ${(lines||[]).map(l=>`<tr><td>${l.desc}</td><td>$${(parseFloat(l.cost)||0).toLocaleString(undefined,{minimumFractionDigits:2})}</td></tr>`).join("")}
     </tbody></table>
-    ${scopeItems.filter(s=>s.trim()).length>0?`<div style="margin-bottom:20px;">${scopeItems.filter(s=>s.trim()).map(s=>`<div class="scope-item">${s}</div>`).join("")}</div>`:""}
+    ${(scopeItems||[]).filter(s=>s.trim()).length>0?`<div style="margin-bottom:20px;">${(scopeItems||[]).filter(s=>s.trim()).map(s=>`<div class="scope-item">${s}</div>`).join("")}</div>`:""}
     <div class="totals">
       <div class="total-row"><span>Total</span><span>$${totalCost.toLocaleString(undefined,{minimumFractionDigits:2})}</span></div>
       <div class="total-row"><span>Permit Fee</span><span>$${permitAmt.toLocaleString(undefined,{minimumFractionDigits:2})}</span></div>
@@ -2426,7 +2426,7 @@ function RoofProposalModal({contact, dbUser, onSave, onClose}){
                 <span style={{fontSize:10.5,fontWeight:700,color:"#fff",textTransform:"uppercase",letterSpacing:0.4}}>Description</span>
                 <span style={{fontSize:10.5,fontWeight:700,color:"#fff",textTransform:"uppercase",letterSpacing:0.4}}>Cost</span>
               </div>
-              {lines.map((l,i)=>(
+              {(lines||[]).map((l,i)=>(
                 <div key={l.id} style={{display:"grid",gridTemplateColumns:"1fr 110px 28px",gap:6,padding:"8px 10px",borderBottom:`1px solid ${C.border}`,alignItems:"center",background:i%2===0?"#fff":"#FAFAF8"}}>
                   <input value={l.desc} onChange={e=>updateLine(l.id,"desc",e.target.value)} placeholder="Description"
                     style={{border:`1px solid ${C.border}`,borderRadius:5,padding:"5px 8px",fontSize:12.5,outline:"none",width:"100%"}}/>
@@ -2443,7 +2443,7 @@ function RoofProposalModal({contact, dbUser, onSave, onClose}){
           <div>
             <div style={{fontSize:11,fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:0.5,marginBottom:8}}>Scope of Work (bullet points)</div>
             <div style={{border:`1px solid ${C.border}`,borderRadius:8,overflow:"hidden"}}>
-              {scopeItems.map((s,i)=>(
+              {(scopeItems||[]).map((s,i)=>(
                 <div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 10px",borderBottom:`1px solid ${C.border}44`,background:"#fff"}}>
                   <span style={{color:"#4169E1",fontWeight:700,flexShrink:0}}>•</span>
                   <input value={s} onChange={e=>updateScope(i,e.target.value)}
@@ -2538,7 +2538,7 @@ function MiscProposalModal({contact, dbUser, onSave, onClose}){
   const [saving, setSaving] = React.useState(false);
   const [saved, setSaved] = React.useState(false);
 
-  const totalCost = lines.reduce((sum,l)=>sum+(parseFloat(l.cost)||0),0);
+  const totalCost = (lines||[]).reduce((sum,l)=>sum+(parseFloat(l.cost)||0),0);
   const permitAmt = parseFloat(permitFee)||0;
   const netTotal = totalCost + permitAmt;
   const today = new Date().toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"});
@@ -2604,9 +2604,9 @@ function MiscProposalModal({contact, dbUser, onSave, onClose}){
     </div>
     <div style="font-size:11px;font-weight:700;color:#8A8170;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Description</div>
     <table class="desc-table"><thead><tr><th>Description</th><th>Cost</th></tr></thead><tbody>
-    ${lines.map(l=>`<tr><td>${l.desc}</td><td>$${(parseFloat(l.cost)||0).toLocaleString(undefined,{minimumFractionDigits:2})}</td></tr>`).join("")}
+    ${(lines||[]).map(l=>`<tr><td>${l.desc}</td><td>$${(parseFloat(l.cost)||0).toLocaleString(undefined,{minimumFractionDigits:2})}</td></tr>`).join("")}
     </tbody></table>
-    ${scopeItems.filter(s=>s.trim()).length>0?`<div style="margin-bottom:20px;">${scopeItems.filter(s=>s.trim()).map(s=>`<div class="scope-item">${s}</div>`).join("")}</div>`:""}
+    ${(scopeItems||[]).filter(s=>s.trim()).length>0?`<div style="margin-bottom:20px;">${(scopeItems||[]).filter(s=>s.trim()).map(s=>`<div class="scope-item">${s}</div>`).join("")}</div>`:""}
     <div class="totals">
       <div class="total-row"><span>Total</span><span>$${totalCost.toLocaleString(undefined,{minimumFractionDigits:2})}</span></div>
       <div class="total-row"><span>Permit Fee</span><span>$${permitAmt.toLocaleString(undefined,{minimumFractionDigits:2})}</span></div>
@@ -2673,7 +2673,7 @@ function MiscProposalModal({contact, dbUser, onSave, onClose}){
                 <span style={{fontSize:10.5,fontWeight:700,color:"#fff",textTransform:"uppercase",letterSpacing:0.4}}>Description</span>
                 <span style={{fontSize:10.5,fontWeight:700,color:"#fff",textTransform:"uppercase",letterSpacing:0.4}}>Cost</span>
               </div>
-              {lines.map((l,i)=>(
+              {(lines||[]).map((l,i)=>(
                 <div key={l.id} style={{display:"grid",gridTemplateColumns:"1fr 110px 28px",gap:6,padding:"8px 10px",borderBottom:`1px solid ${C.border}`,alignItems:"center",background:i%2===0?"#fff":"#FAFAF8"}}>
                   <input value={l.desc} onChange={e=>updateLine(l.id,"desc",e.target.value)} placeholder="Description of work"
                     style={{border:`1px solid ${C.border}`,borderRadius:5,padding:"5px 8px",fontSize:12.5,outline:"none",width:"100%"}}/>
@@ -2689,7 +2689,7 @@ function MiscProposalModal({contact, dbUser, onSave, onClose}){
           <div>
             <div style={{fontSize:11,fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:0.5,marginBottom:8}}>Scope of Work</div>
             <div style={{border:`1px solid ${C.border}`,borderRadius:8,overflow:"hidden"}}>
-              {scopeItems.map((s,i)=>(
+              {(scopeItems||[]).map((s,i)=>(
                 <div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 10px",borderBottom:`1px solid ${C.border}44`,background:"#fff"}}>
                   <span style={{color:"#4169E1",fontWeight:700,flexShrink:0}}>•</span>
                   <input value={s} onChange={e=>updateScope(i,e.target.value)} style={{flex:1,border:"none",outline:"none",fontSize:12.5,background:"transparent"}}/>
@@ -3053,7 +3053,7 @@ function PublicProposalViewer(){
                     <th style={{padding:"8px 12px",textAlign:"right",fontSize:11,color:"#fff",textTransform:"uppercase"}}>Cost</th>
                   </tr></thead>
                   <tbody>
-                    {pd.lines.map((l,i)=>(
+                    {(pd.lines||[]).map((l,i)=>(
                       <tr key={i} style={{background:i%2===0?"#fff":"#F7F3E9"}}>
                         <td style={{padding:"8px 12px",borderBottom:"1px solid #EAE3D1",fontSize:13}}>{l.desc}</td>
                         <td style={{padding:"8px 12px",borderBottom:"1px solid #EAE3D1",textAlign:"right",fontSize:13,fontWeight:700,color:"#3D6E5C"}}>${(parseFloat(l.cost)||0).toLocaleString(undefined,{minimumFractionDigits:2})}</td>
@@ -3061,9 +3061,9 @@ function PublicProposalViewer(){
                     ))}
                   </tbody>
                 </table>
-                {pd.scopeItems&&pd.scopeItems.filter(s=>s.trim()).length>0&&(
+                {pd.scopeItems&&(pd.scopeItems||[]).filter(s=>s.trim()).length>0&&(
                   <div style={{marginBottom:16}}>
-                    {pd.scopeItems.filter(s=>s.trim()).map((s,i)=>(
+                    {(pd.scopeItems||[]).filter(s=>s.trim()).map((s,i)=>(
                       <div key={i} style={{padding:"3px 0",fontSize:12,color:"#5C5645"}}>
                         <span style={{color:"#4169E1",fontWeight:700}}>• </span>{s}
                       </div>
@@ -3560,7 +3560,7 @@ function App(){
                     </div>
                     {notes.length===0
                       ?<div style={{textAlign:"center",padding:"20px 0",color:C.muted,fontSize:12.5}}>No notes yet — add one above.</div>
-                      :notes.map(n=>(
+                      :(notes||[]).map(n=>(
                         <div key={n.id} style={{background:"#fff",border:`1px solid ${C.border}`,borderRadius:8,padding:"11px 13px",marginBottom:9}}>
                           <div style={{display:"flex",justifyContent:"space-between",marginBottom:5}}>
                             <span style={{fontSize:11,fontWeight:700,color:C.sage}}>You</span>
