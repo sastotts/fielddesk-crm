@@ -511,8 +511,8 @@ function CalendarView({activities, contacts, users, dbUser, onActivityClick, onN
 
   const selectedRep = (users||[]).find(u=>u.id===repFilter)||dbUser;
 
-  const getContact = id => (contacts&&contacts.find)(c=>c.id===id);
-  const getUser = id => (users&&users.find)(u=>u.id===id);
+  const getContact = id => (contacts||[]).find(c=>c.id===id);
+  const getUser = id => (users||[]).find(u=>u.id===id);
 
   // Roll overdue incomplete activities to today
   const rollOverdue = React.useCallback(async() => {
@@ -3354,7 +3354,7 @@ function App(){
   const completeActivity=async(a)=>{
     await sb.from("activities").update({is_completed:true,completed_at:new Date().toISOString()}).eq("id",a.id);
     setActivities(p=>p.map(x=>x.id===a.id?{...x,is_completed:true}:x));
-    setDoneContact((contacts&&contacts.find)(c=>c.id===a.contact_id));
+    setDoneContact((contacts||[]).find(c=>c.id===a.contact_id));
     setShowActivityDetail(null);
     setShowDonePrompt(true);
   };
@@ -3633,7 +3633,7 @@ function App(){
               {activities===null?<Spinner/>:(activities||[]).length===0
                 ?<div style={{textAlign:"center",padding:"20px 10px",color:C.muted,fontSize:12}}>No activities yet.</div>
                 :(activities||[]).map(a=>{
-                  const contact=(contacts&&contacts.find)(c=>c.id===a.contact_id);
+                  const contact=(contacts||[]).find(c=>c.id===a.contact_id);
                   const assignedUser=(users||[]).find(u=>u.id===a.assigned_user_id);
                   const d=a.due_date?new Date(a.due_date):null;
                   return(
@@ -3675,7 +3675,7 @@ function App(){
           contacts={contacts||[]}
           users={users}
           dbUser={dbUser}
-          onActivityClick={a=>{setShowActivityDetail(a);const contact=(contacts&&contacts.find)(c=>c.id===a.contact_id);if(contact)setSelected(contact);}}
+          onActivityClick={a=>{setShowActivityDetail(a);const contact=(contacts||[]).find(c=>c.id===a.contact_id);if(contact)setSelected(contact);}}
           onNewActivity={()=>setShowNewActivity(true)}
           onReschedule={updated=>setActivities(p=>p.map(a=>a.id===updated.id?updated:a))}
         />}
@@ -3743,7 +3743,7 @@ function App(){
 
       {showActivityDetail&&<ActivityDetailModal
         activity={showActivityDetail}
-        contact={(contacts&&contacts.find)(c=>c.id===showActivityDetail.contact_id)}
+        contact={(contacts||[]).find(c=>c.id===showActivityDetail.contact_id)}
         users={users}
         onClose={()=>setShowActivityDetail(null)}
         onComplete={completeActivity}
