@@ -405,11 +405,25 @@ function NewContactModal({userId,users,onSave,onClose}){
   const photoRef=React.useRef(null);
   const s=k=>e=>setF(p=>({...p,[k]:e.target.value}));
 
-  const handlePhotoCapture=(e)=>{
+  const compressImageNew = (dataUrl) => new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      const ratio = Math.min(800/img.width, 800/img.height, 1);
+      canvas.width = img.width * ratio; canvas.height = img.height * ratio;
+      canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL("image/jpeg", 0.7));
+    };
+    img.src = dataUrl;
+  });
+  const handlePhotoCapture=async(e)=>{
     const file=e.target.files[0];
     if(!file)return;
     const reader=new FileReader();
-    reader.onload=ev=>setHousePhoto(ev.target.result);
+    reader.onload=async(ev)=>{
+      const compressed = await compressImageNew(ev.target.result);
+      setHousePhoto(compressed);
+    };
     reader.readAsDataURL(file);
   };
 
@@ -2081,6 +2095,7 @@ S&S Contracting Company LLC
   const [sending, setSending] = React.useState(false);
   const [sent, setSent] = React.useState(false);
   const [error, setError] = React.useState("");
+  const [to, setTo] = React.useState(contact.email||"");
 
   const selectTemplate = (key) => {
     setTemplate(key);
@@ -2100,11 +2115,11 @@ S&S Contracting Company LLC
   };
 
   const handleOpenEmail = async() => {
-    if(!contact.email){return;}
+    if(!to){setError("Please enter an email address.");return;}
     setSending(true);
     try {
       await sendEmailViaResend({
-        to: contact.email,
+        to: to||contact.email,
         toName: `${contact.first_name} ${contact.last_name}`,
         subject,
         text: body,
@@ -2120,6 +2135,9 @@ S&S Contracting Company LLC
             "</div></div>",
       });
       await logEmail();
+      if(to && to !== contact.email){
+        await sb.from("contacts").update({email:to}).eq("id",contact.id);
+      }
       setSent(true);
       setTimeout(()=>onClose(), 2000);
     } catch(e) {
@@ -2165,6 +2183,13 @@ S&S Contracting Company LLC
                 ⚠ No email address on file for this contact. Add one in Edit Contact first.
               </div>
             )}
+
+            {/* To field */}
+            <Lbl label="Send To">
+              <input value={to} onChange={e=>setTo(e.target.value)} placeholder="customer@email.com"
+                style={{width:"100%",padding:"8px 10px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:13,background:"#fff",outline:"none",boxSizing:"border-box"}}/>
+              <div style={{fontSize:10.5,color:C.muted,marginTop:4}}>If different from contact record, will auto-save to their profile</div>
+            </Lbl>
 
             {/* Template picker */}
             <Lbl label="Email Template">
@@ -2879,14 +2904,41 @@ function EditContactModal({contact, users, dbUser, onSave, onDelete, onClose}){
   const [confirmDelete, setConfirmDelete] = React.useState(false);
   const [deleting, setDeleting] = React.useState(false);
   const [err, setErr] = React.useState("");
+  const [housePhoto, setHousePhoto] = React.useState(contact.house_photo||null);
+  const editPhotoRef = React.useRef(null);
   const isAdmin = (dbUser&&dbUser.role)==="admin";
   const s = k => e => setF(p=>({...p,[k]:e.target.value}));
+
+  const compressImage = (dataUrl) => new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      const ratio = Math.min(800/img.width, 800/img.height, 1);
+      canvas.width = img.width * ratio;
+      canvas.height = img.height * ratio;
+      canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL("image/jpeg", 0.7));
+    };
+    img.src = dataUrl;
+  });
+
+  const handleEditPhoto = async(e) => {
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = async(ev) => {
+      const compressed = await compressImage(ev.target.result);
+      setHousePhoto(compressed);
+    };
+    reader.readAsDataURL(file);
+  };
 
   const save = async () => {
     if(!f.first_name||!f.last_name){setErr("First and last name are required.");return;}
     setSaving(true); setErr("");
     const {data,error} = await sb.from("contacts").update({
-      ...f, estimated_value: parseFloat(f.estimated_value)||0
+      ...f, estimated_value: parseFloat(f.estimated_value)||0,
+      house_photo: housePhoto||null,
     }).eq("id", contact.id).select().single();
     if(error){setErr(error.message);setSaving(false);return;}
     onSave(data);
@@ -2975,6 +3027,27 @@ function EditContactModal({contact, users, dbUser, onSave, onDelete, onClose}){
               )}
             </div>
           )}
+        </div>
+
+        {/* House Photo */}
+        <div style={{padding:"0 20px 16px"}}>
+          <Lbl label="House Photo">
+            {housePhoto?(
+              <div style={{position:"relative",borderRadius:8,overflow:"hidden",border:`2px solid ${C.sage}`}}>
+                <img src={housePhoto} alt="House" style={{width:"100%",maxHeight:160,objectFit:"cover",display:"block"}}/>
+                <div style={{position:"absolute",bottom:0,left:0,right:0,background:"rgba(0,0,0,0.5)",padding:"6px 10px",display:"flex",justifyContent:"space-between"}}>
+                  <button onClick={()=>editPhotoRef.current.click()} style={{fontSize:11,color:"#fff",background:"rgba(255,255,255,0.2)",border:"none",borderRadius:4,padding:"3px 8px",cursor:"pointer"}}>Retake</button>
+                  <button onClick={()=>setHousePhoto(null)} style={{fontSize:11,color:"#fff",background:"rgba(194,86,47,0.8)",border:"none",borderRadius:4,padding:"3px 8px",cursor:"pointer",fontWeight:600}}>Remove</button>
+                </div>
+              </div>
+            ):(
+              <div style={{display:"flex",gap:8}}>
+                <button onClick={()=>{editPhotoRef.current.setAttribute("capture","environment");editPhotoRef.current.click();}} style={{flex:1,padding:"11px",background:C.dark,color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:700,cursor:"pointer"}}>📷 Take Photo</button>
+                <button onClick={()=>{editPhotoRef.current.removeAttribute("capture");editPhotoRef.current.click();}} style={{padding:"11px 14px",background:"#fff",color:C.sub,border:`1px solid ${C.border}`,borderRadius:8,fontSize:13,cursor:"pointer"}}>📁</button>
+              </div>
+            )}
+            <input ref={editPhotoRef} type="file" accept="image/*" onChange={handleEditPhoto} style={{display:"none"}}/>
+          </Lbl>
         </div>
 
         {/* Footer buttons */}
@@ -3304,7 +3377,7 @@ sandscontractingco.com`
     setSending(true);
     try{
       await sendEmailViaResend({
-        to: contact.email,
+        to: to||contact.email,
         toName: `${contact.first_name} ${contact.last_name}`,
         subject,
         text: body,
