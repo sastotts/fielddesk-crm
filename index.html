@@ -412,14 +412,13 @@ function NewContactModal({userId,users,onSave,onClose}){
       img.onload = () => {
         try {
           const canvas = document.createElement("canvas");
-          const maxDim = 800;
-          const ratio = Math.min(maxDim/img.width, maxDim/img.height, 1);
+          const ratio = Math.min(600/img.width, 600/img.height, 1);
           canvas.width = Math.floor(img.width * ratio);
           canvas.height = Math.floor(img.height * ratio);
           const ctx = canvas.getContext("2d");
           if(!ctx){ resolve(dataUrl); return; }
           ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-          resolve(canvas.toDataURL("image/jpeg", 0.7));
+          resolve(canvas.toDataURL("image/jpeg", 0.5));
         } catch(e){ resolve(dataUrl); }
       };
       img.src = dataUrl;
@@ -1392,7 +1391,7 @@ function GutterProposalModal({contact, dbUser, onSave, onClose}){
         proposal_data: JSON.parse(JSON.stringify({
           gutter_ft: gutterFt||"",
           downspouts: downspouts||"",
-          house_photo: localHousePhoto||form.house_photo||contact.house_photo||null,
+          has_house_photo: !!(localHousePhoto||form.house_photo||contact.house_photo),
           punchouts: form.punchouts||"",
           a_elbows: form.a_elbows||"",
           b_elbows: form.b_elbows||"",
@@ -1996,7 +1995,7 @@ function ProposalsTab({contactId, contact, onNew, dbUser}){
                   totalPrice={viewingProposal.total_amount}
                   useManualPrice={viewingProposal.proposal_data.use_manual_price}
                   diagramData={viewingProposal.proposal_data.diagram}
-                  housePhoto={viewingProposal.proposal_data.house_photo||contact.house_photo}
+                  housePhoto={contact.house_photo}
                   signature={viewingProposal.proposal_data.signature}
                   repName={viewingProposal.proposal_data.rep_name}
                   repPhone={viewingProposal.proposal_data.rep_phone}
@@ -2846,14 +2845,13 @@ function JobsitePhotosTab({contactId, contact}){
       img.onload = () => {
         try {
           const canvas = document.createElement("canvas");
-          const maxW = 1200;
-          const ratio = Math.min(maxW/img.width, maxW/img.height, 1);
+          const ratio = Math.min(800/img.width, 800/img.height, 1);
           canvas.width = Math.floor(img.width * ratio);
           canvas.height = Math.floor(img.height * ratio);
           const ctx = canvas.getContext("2d");
           if(!ctx){ resolve(dataUrl); return; }
           ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-          resolve(canvas.toDataURL("image/jpeg", 0.75));
+          resolve(canvas.toDataURL("image/jpeg", 0.55));
         } catch(e){ resolve(dataUrl); }
       };
       img.src = dataUrl;
@@ -2994,14 +2992,13 @@ function EditContactModal({contact, users, dbUser, onSave, onDelete, onClose}){
       img.onload = () => {
         try {
           const canvas = document.createElement("canvas");
-          const maxDim = 800;
-          const ratio = Math.min(maxDim/img.width, maxDim/img.height, 1);
+          const ratio = Math.min(600/img.width, 600/img.height, 1);
           canvas.width = Math.floor(img.width * ratio);
           canvas.height = Math.floor(img.height * ratio);
           const ctx = canvas.getContext("2d");
           if(!ctx){ resolve(dataUrl); return; }
           ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-          resolve(canvas.toDataURL("image/jpeg", 0.7));
+          resolve(canvas.toDataURL("image/jpeg", 0.5));
         } catch(e){ resolve(dataUrl); }
       };
       img.src = dataUrl;
@@ -3264,9 +3261,9 @@ function PublicProposalViewer(){
           </div>
 
           {/* House photo */}
-          {(housePhoto||pd.house_photo||contact.house_photo)&&(
+          {(housePhoto||pd.has_house_photo||pd.house_photo||contact.house_photo)&&(
             <div style={{padding:"0 28px 16px",borderBottom:"1px solid #EAE3D1"}}>
-              <img src={housePhoto||pd.house_photo||contact.house_photo} alt="Property" style={{width:"100%",maxHeight:220,objectFit:"cover",borderRadius:8}}/>
+              <img src={housePhoto||contact.house_photo} alt="Property" style={{width:"100%",maxHeight:220,objectFit:"cover",borderRadius:8}}/>
             </div>
           )}
 
@@ -3771,11 +3768,6 @@ function App(){
               </div>
 
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"12px 22px",padding:"14px 22px"}}>
-                {selected.house_photo&&(
-                <div style={{gridColumn:"1 / -1",marginBottom:4}}>
-                  <img src={selected.house_photo} alt="House" style={{width:"100%",maxHeight:180,objectFit:"cover",borderRadius:8,border:`1px solid ${C.border}`}}/>
-                </div>
-              )}
               {[["📞","Phone",selected.phone||"—"],["✉️","Email",selected.email||"—"],
                   ["📍","Address",[selected.address,selected.city,selected.state,selected.zip].filter(Boolean).join(", ")||"—"],
                   ["🕐","Added",selected.created_at?new Date(selected.created_at).toLocaleDateString():"—"]
