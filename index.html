@@ -1356,6 +1356,7 @@ function GutterProposalModal({contact, dbUser, onSave, onClose}){
   const [emailSent, setEmailSent] = React.useState(false);
   const [showPreview, setShowPreview] = React.useState(false);
   const [savedProposalToken, setSavedProposalToken] = React.useState(null);
+  const [localHousePhoto, setLocalHousePhoto] = React.useState(contact.house_photo||null);
   const [diagramData, setDiagramData] = React.useState(null);
   const [manualPrice, setManualPrice] = React.useState("");
   const [useManualPrice, setUseManualPrice] = React.useState(false);
@@ -1383,7 +1384,7 @@ function GutterProposalModal({contact, dbUser, onSave, onClose}){
         proposal_data: JSON.parse(JSON.stringify({
           gutter_ft: gutterFt||"",
           downspouts: downspouts||"",
-          house_photo: contact.house_photo||form.house_photo||null,
+          house_photo: localHousePhoto||form.house_photo||contact.house_photo||null,
           punchouts: form.punchouts||"",
           a_elbows: form.a_elbows||"",
           b_elbows: form.b_elbows||"",
@@ -1538,17 +1539,51 @@ function GutterProposalModal({contact, dbUser, onSave, onClose}){
           {/* House Photo */}
           <div style={{marginTop:14}}>
             <div style={{fontSize:11,fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:0.5,marginBottom:6}}>House Photo</div>
-            {contact.house_photo?(
-              <img src={contact.house_photo} alt="House" style={{width:"100%",maxHeight:160,objectFit:"cover",borderRadius:8,border:`1px solid ${C.border}`,marginBottom:6}}/>
+            {(localHousePhoto||form.house_photo)?(
+              <div style={{position:"relative"}}>
+                <img src={localHousePhoto||form.house_photo} alt="House" style={{width:"100%",maxHeight:160,objectFit:"cover",borderRadius:8,border:`1px solid ${C.border}`,display:"block"}}/>
+                <button onClick={()=>document.getElementById("proposalPhotoInput")&&document.getElementById("proposalPhotoInput").click()}
+                  style={{position:"absolute",top:8,right:8,background:"rgba(46,42,33,0.7)",color:"#fff",border:"none",borderRadius:6,padding:"4px 10px",fontSize:11,cursor:"pointer",fontWeight:600}}>
+                  Retake
+                </button>
+              </div>
             ):(
-              <div style={{border:`2px dashed ${C.border}`,borderRadius:8,padding:"10px",textAlign:"center",background:C.tan,cursor:"pointer"}}
+              <div style={{border:`2px dashed ${C.border}`,borderRadius:8,padding:"14px",textAlign:"center",background:C.tan,cursor:"pointer"}}
                 onClick={()=>document.getElementById("proposalPhotoInput")&&document.getElementById("proposalPhotoInput").click()}>
-                <div style={{fontSize:20,marginBottom:4}}>📷</div>
-                <div style={{fontSize:12,color:C.sub}}>Tap to add house photo</div>
-                <input id="proposalPhotoInput" type="file" accept="image/*" capture="environment" style={{display:"none"}}
-                  onChange={e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{setForm(p=>({...p,house_photo:ev.target.result}));};r.readAsDataURL(f);}}/>
+                <div style={{fontSize:28,marginBottom:6}}>📷</div>
+                <div style={{fontSize:13,fontWeight:700,color:C.sub}}>Tap to take photo of property</div>
+                <div style={{fontSize:11,color:C.muted,marginTop:2}}>Photo saves to contact &amp; proposal</div>
               </div>
             )}
+            <input id="proposalPhotoInput" type="file" accept="image/*" capture="environment" style={{display:"none"}}
+              onChange={async e=>{
+                const f=e.target.files[0];
+                if(!f)return;
+                const reader=new FileReader();
+                reader.onload=async ev=>{
+                  try{
+                    const img=new Image();
+                    img.onload=async()=>{
+                      const canvas=document.createElement("canvas");
+                      const ratio=Math.min(800/img.width,800/img.height,1);
+                      canvas.width=Math.floor(img.width*ratio);
+                      canvas.height=Math.floor(img.height*ratio);
+                      canvas.getContext("2d").drawImage(img,0,0,canvas.width,canvas.height);
+                      const compressed=canvas.toDataURL("image/jpeg",0.7);
+                      setForm(p=>({...p,house_photo:compressed}));
+                      setLocalHousePhoto(compressed);
+                      // Save to contact record immediately
+                      await sb.from("contacts").update({house_photo:compressed}).eq("id",contact.id);
+                    };
+                    img.src=ev.target.result;
+                  }catch(err){
+                    setForm(p=>({...p,house_photo:ev.target.result}));
+                    setLocalHousePhoto(ev.target.result);
+                    await sb.from("contacts").update({house_photo:ev.target.result}).eq("id",contact.id);
+                  }
+                };
+                reader.readAsDataURL(f);
+              }}/>
           </div>
 
           {/* Notes */}
@@ -2181,7 +2216,7 @@ S&S Contracting Company LLC
           <div style={{padding:"40px 20px",textAlign:"center"}}>
             <div style={{fontSize:48,marginBottom:12}}>📨</div>
             <div style={{fontSize:16,fontWeight:700,color:C.dark}}>Email Sent! ✅</div>
-            <div style={{fontSize:12.5,color:C.sub,marginTop:6}}>Email delivered to {contact.email} and logged to contact history.</div>
+            <div style={{fontSize:12.5,color:C.sub,marginTop:6}}>Email delivered to {to||contact.email} and logged to contact history.</div>
           </div>
         ) : (
           <div style={{padding:"18px 20px",display:"flex",flexDirection:"column",gap:14}}>
@@ -2224,17 +2259,14 @@ S&S Contracting Company LLC
                 style={{width:"100%",padding:"9px 11px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:12.5,resize:"vertical",outline:"none",boxSizing:"border-box",lineHeight:1.5}}/>
             </Lbl>
 
-            {/* Info box */}
-            <div style={{background:C.tan,border:`1px solid ${C.border}`,borderRadius:8,padding:"10px 14px",fontSize:11.5,color:C.sub}}>
-              💡 Clicking "Open in Email App" will open your Gmail, Outlook, or Mail app with this message pre-filled. Just hit Send from there!
-            </div>
+
           </div>
         )}
 
         {!sent&&(
           <div style={{padding:"12px 20px 20px",display:"flex",gap:10,borderTop:`1px solid ${C.border}`}}>
             {error&&<div style={{background:"#FFF0ED",border:"1px solid #F5C4B8",borderRadius:7,padding:"9px 12px",fontSize:12,color:"#8B2020",marginBottom:4}}>{error}</div>}
-            <Btn primary onClick={handleOpenEmail} disabled={!contact.email||sending} style={{flex:1,justifyContent:"center",padding:"11px",fontSize:13}}>
+            <Btn primary onClick={handleOpenEmail} disabled={!to||sending} style={{flex:1,justifyContent:"center",padding:"11px",fontSize:13}}>
               {sending?"📨 Sending…":"📧 Send Email"}
             </Btn>
             <Btn onClick={onClose} style={{justifyContent:"center",padding:"11px"}}>Cancel</Btn>
