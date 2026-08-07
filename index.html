@@ -1336,6 +1336,13 @@ function DiagramCanvas({onSave}){
 
 // ── Gutter Proposal Modal ─────────────────────────────────────────
 function GutterProposalModal({contact, dbUser, onSave, onClose}){
+  // Fetch fresh contact data to ensure house_photo is current
+  const [freshContact, setFreshContact] = React.useState(contact);
+  React.useEffect(()=>{
+    sb.from("contacts").select("*").eq("id", contact.id).single()
+      .then(({data})=>{ if(data) setFreshContact(data); });
+  },[contact.id]);
+
   const [form, setForm] = React.useState({
     gutter_ft: "",
     downspouts: "",
@@ -1357,6 +1364,7 @@ function GutterProposalModal({contact, dbUser, onSave, onClose}){
   const [showPreview, setShowPreview] = React.useState(false);
   const [savedProposalToken, setSavedProposalToken] = React.useState(null);
   const [localHousePhoto, setLocalHousePhoto] = React.useState(contact.house_photo||null);
+  React.useEffect(()=>{ if(freshContact.house_photo) setLocalHousePhoto(freshContact.house_photo); },[freshContact.house_photo]);
   const [diagramData, setDiagramData] = React.useState(null);
   const [manualPrice, setManualPrice] = React.useState("");
   const [useManualPrice, setUseManualPrice] = React.useState(false);
@@ -1710,6 +1718,7 @@ function GutterProposalModal({contact, dbUser, onSave, onClose}){
           totalPrice={finalPrice}
           useManualPrice={useManualPrice}
           diagramData={diagramData}
+          housePhoto={localHousePhoto||contact.house_photo}
           signature={signature}
           repName={repName}
           repPhone={repPhone}
@@ -1723,7 +1732,7 @@ function GutterProposalModal({contact, dbUser, onSave, onClose}){
 
 
 // ── Printable Proposal View ───────────────────────────────────────
-function PrintableProposal({contact, form, gutterFt, downspouts, gutterPrice, dsPrice, totalPrice, useManualPrice, diagramData, signature, repName, repPhone, onClose}){
+function PrintableProposal({contact, form, gutterFt, downspouts, gutterPrice, dsPrice, totalPrice, useManualPrice, diagramData, housePhoto, signature, repName, repPhone, onClose}){
   const today = new Date().toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"});
 
   const printProposal = () => {
@@ -1987,6 +1996,7 @@ function ProposalsTab({contactId, contact, onNew, dbUser}){
                   totalPrice={viewingProposal.total_amount}
                   useManualPrice={viewingProposal.proposal_data.use_manual_price}
                   diagramData={viewingProposal.proposal_data.diagram}
+                  housePhoto={viewingProposal.proposal_data.house_photo||contact.house_photo}
                   signature={viewingProposal.proposal_data.signature}
                   repName={viewingProposal.proposal_data.rep_name}
                   repPhone={viewingProposal.proposal_data.rep_phone}
@@ -3254,9 +3264,9 @@ function PublicProposalViewer(){
           </div>
 
           {/* House photo */}
-          {(pd.house_photo||contact.house_photo)&&(
+          {(housePhoto||pd.house_photo||contact.house_photo)&&(
             <div style={{padding:"0 28px 16px",borderBottom:"1px solid #EAE3D1"}}>
-              <img src={pd.house_photo||contact.house_photo} alt="Property" style={{width:"100%",maxHeight:220,objectFit:"cover",borderRadius:8}}/>
+              <img src={housePhoto||pd.house_photo||contact.house_photo} alt="Property" style={{width:"100%",maxHeight:220,objectFit:"cover",borderRadius:8}}/>
             </div>
           )}
 
