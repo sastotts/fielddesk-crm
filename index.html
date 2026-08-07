@@ -406,15 +406,24 @@ function NewContactModal({userId,users,onSave,onClose}){
   const s=k=>e=>setF(p=>({...p,[k]:e.target.value}));
 
   const compressImageNew = (dataUrl) => new Promise(resolve => {
-    const img = new Image();
-    img.onload = () => {
-      const canvas = document.createElement("canvas");
-      const ratio = Math.min(800/img.width, 800/img.height, 1);
-      canvas.width = img.width * ratio; canvas.height = img.height * ratio;
-      canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
-      resolve(canvas.toDataURL("image/jpeg", 0.7));
-    };
-    img.src = dataUrl;
+    try {
+      const img = new Image();
+      img.onerror = () => resolve(dataUrl);
+      img.onload = () => {
+        try {
+          const canvas = document.createElement("canvas");
+          const maxDim = 800;
+          const ratio = Math.min(maxDim/img.width, maxDim/img.height, 1);
+          canvas.width = Math.floor(img.width * ratio);
+          canvas.height = Math.floor(img.height * ratio);
+          const ctx = canvas.getContext("2d");
+          if(!ctx){ resolve(dataUrl); return; }
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          resolve(canvas.toDataURL("image/jpeg", 0.7));
+        } catch(e){ resolve(dataUrl); }
+      };
+      img.src = dataUrl;
+    } catch(e){ resolve(dataUrl); }
   });
   const handlePhotoCapture=async(e)=>{
     const file=e.target.files[0];
@@ -2788,24 +2797,51 @@ function JobsitePhotosTab({contactId, contact}){
       });
   },[contactId]);
 
+  const compressJobsitePhoto = (dataUrl) => new Promise(resolve => {
+    try {
+      const img = new Image();
+      img.onerror = () => resolve(dataUrl);
+      img.onload = () => {
+        try {
+          const canvas = document.createElement("canvas");
+          const maxW = 1200;
+          const ratio = Math.min(maxW/img.width, maxW/img.height, 1);
+          canvas.width = Math.floor(img.width * ratio);
+          canvas.height = Math.floor(img.height * ratio);
+          const ctx = canvas.getContext("2d");
+          if(!ctx){ resolve(dataUrl); return; }
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          resolve(canvas.toDataURL("image/jpeg", 0.75));
+        } catch(e){ resolve(dataUrl); }
+      };
+      img.src = dataUrl;
+    } catch(e){ resolve(dataUrl); }
+  });
+
   const handlePhoto = async(e) => {
     const file = e.target.files[0];
     if(!file) return;
     setUploading(true);
-    const reader = new FileReader();
-    reader.onload = async(ev) => {
-      const newPhoto = {
-        id: Date.now(),
-        data: ev.target.result,
-        taken_at: new Date().toISOString(),
-        label: "",
+    try {
+      const reader = new FileReader();
+      reader.onerror = () => setUploading(false);
+      reader.onload = async(ev) => {
+        try {
+          const compressed = await compressJobsitePhoto(ev.target.result);
+          const newPhoto = {
+            id: Date.now(),
+            data: compressed,
+            taken_at: new Date().toISOString(),
+            label: "",
+          };
+          const updated = [...photos, newPhoto];
+          setPhotos(updated);
+          await sb.from("contacts").update({jobsite_photos: updated}).eq("id", contactId);
+        } catch(err){ console.error("Photo save error:", err); }
+        finally { setUploading(false); }
       };
-      const updated = [...photos, newPhoto];
-      setPhotos(updated);
-      await sb.from("contacts").update({jobsite_photos: updated}).eq("id", contactId);
-      setUploading(false);
-    };
-    reader.readAsDataURL(file);
+      reader.readAsDataURL(file);
+    } catch(e){ setUploading(false); }
   };
 
   const deletePhoto = async(id) => {
@@ -2910,16 +2946,24 @@ function EditContactModal({contact, users, dbUser, onSave, onDelete, onClose}){
   const s = k => e => setF(p=>({...p,[k]:e.target.value}));
 
   const compressImage = (dataUrl) => new Promise(resolve => {
-    const img = new Image();
-    img.onload = () => {
-      const canvas = document.createElement("canvas");
-      const ratio = Math.min(800/img.width, 800/img.height, 1);
-      canvas.width = img.width * ratio;
-      canvas.height = img.height * ratio;
-      canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
-      resolve(canvas.toDataURL("image/jpeg", 0.7));
-    };
-    img.src = dataUrl;
+    try {
+      const img = new Image();
+      img.onerror = () => resolve(dataUrl);
+      img.onload = () => {
+        try {
+          const canvas = document.createElement("canvas");
+          const maxDim = 800;
+          const ratio = Math.min(maxDim/img.width, maxDim/img.height, 1);
+          canvas.width = Math.floor(img.width * ratio);
+          canvas.height = Math.floor(img.height * ratio);
+          const ctx = canvas.getContext("2d");
+          if(!ctx){ resolve(dataUrl); return; }
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          resolve(canvas.toDataURL("image/jpeg", 0.7));
+        } catch(e){ resolve(dataUrl); }
+      };
+      img.src = dataUrl;
+    } catch(e){ resolve(dataUrl); }
   });
 
   const handleEditPhoto = async(e) => {
@@ -3645,14 +3689,21 @@ function App(){
           {/* Contact Detail */}
           {selected?(
             <div style={{flex:1,background:C.cream,display:"flex",flexDirection:"column",overflowY:"auto",borderRight:`1px solid ${C.border}`}}>
+              {/* House photo banner - full width at top */}
+              {selected.house_photo&&(
+                <div style={{position:"relative",width:"100%",height:180,flexShrink:0}}>
+                  <img src={selected.house_photo} alt="Property" style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>
+                  <div style={{position:"absolute",inset:0,background:"linear-gradient(to bottom, transparent 50%, rgba(46,42,33,0.7) 100%)"}}/>
+                  <div style={{position:"absolute",bottom:12,left:16,color:"#fff"}}>
+                    <div style={{fontSize:17,fontWeight:800}}>{selected.first_name} {selected.last_name}</div>
+                    <div style={{fontSize:11.5,opacity:0.85}}>{selected.address||""}</div>
+                  </div>
+                </div>
+              )}
               <div style={{display:"flex",alignItems:"center",gap:13,padding:"18px 22px 14px",borderBottom:`1px solid ${C.border}`}}>
-                {selected.house_photo
-                  ? <div style={{position:"relative",flexShrink:0}}>
-                      <img src={selected.house_photo} alt="House" style={{width:70,height:54,objectFit:"cover",borderRadius:8,border:`1px solid ${C.border}`,display:"block"}}/>
-                      <div style={{position:"absolute",bottom:-8,right:-8,width:26,height:26,borderRadius:"50%",background:avatarColor(selected.first_name),color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:700,border:"2px solid #fff"}}>{(selected.first_name&&selected.first_name[0])}{(selected.last_name&&selected.last_name[0])}</div>
-                    </div>
-                  : <div style={{width:48,height:48,borderRadius:"50%",background:avatarColor(selected.first_name),color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:700,flexShrink:0}}>{(selected.first_name&&selected.first_name[0])}{(selected.last_name&&selected.last_name[0])}</div>
-                }
+                {!selected.house_photo&&(
+                  <div style={{width:48,height:48,borderRadius:"50%",background:avatarColor(selected.first_name),color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:700,flexShrink:0}}>{(selected.first_name&&selected.first_name[0])}{(selected.last_name&&selected.last_name[0])}</div>
+                )}
                 <div style={{flex:1}}>
                   <div style={{display:"flex",alignItems:"center",gap:9,flexWrap:"wrap"}}>
                     <h2 style={{fontSize:19,margin:0,fontWeight:700,color:C.dark}}>{selected.first_name} {selected.last_name}</h2>
