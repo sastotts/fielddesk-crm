@@ -1696,7 +1696,7 @@ function GutterProposalModal({contact, dbUser, onSave, onClose}){
                 await sendEmailViaResend({
                   to: contact.email,
                   toName: `${contact.first_name} ${contact.last_name}`,
-                  subject: `Your S&S Contracting Proposal`,
+                  subject: `Proposal from S&S Contracting`,
                   text: `Hi ${contact.first_name},\n\nThank you for the opportunity to provide you with a proposal!\n\nClick the link below to view your proposal, review the details, and sign to accept:\n\n${link}\n\nIf you have any questions please don't hesitate to reach out.\n\nBest regards,\n${(dbUser&&dbUser.full_name)||"S&S Contracting"}\nS&S Contracting Company LLC\n(405) 201-4139`,
                 });
                 alert("Proposal link emailed to " + contact.email + "!");
@@ -2071,7 +2071,7 @@ function EmailModal({contact, dbUser, onClose}){
       body: `Hi ${contact.first_name},\n\nI wanted to follow up from our recent conversation about your home improvement needs.\n\nAt S&S Contracting we take pride in quality Roofing, Gutters, and Outdoor Living projects on time and on budget.\n\nWould you be available for a free inspection this week?\n\nBest regards,\n${(dbUser&&dbUser.full_name)||""}\nS&S Contracting Company LLC\n(405) 201-4139\nstacy@sandscontractingco.com`,
     },
     proposal: {
-      subject: `Your proposal from S&S Contracting is ready`,
+      subject: `Proposal`,
       body: `Hi ${contact.first_name},\n\nThank you for the opportunity to put together a proposal for your project! Please review it at your convenience.\n\nI'm happy to answer any questions or make adjustments - just reply or call me directly.\n\nBest regards,\n${(dbUser&&dbUser.full_name)||""}\nS&S Contracting Company LLC\n(405) 201-4139\nstacy@sandscontractingco.com`,
     },
     appointment: {
@@ -2520,7 +2520,7 @@ function RoofProposalModal({contact, dbUser, onSave, onClose}){
                 style={{padding:"8px 14px",background:"#3D6E5C",color:"#fff",border:"none",borderRadius:6,fontSize:12,fontWeight:700,cursor:"pointer"}}>📋 Copy</button>
               <button onClick={async()=>{
                 const link=`${window.location.origin}?token=${savedToken}`;
-                await sendEmailViaResend({to:contact.email,toName:`${contact.first_name} ${contact.last_name}`,subject:`Your S&S Contracting Proposal`,
+                await sendEmailViaResend({to:contact.email,toName:`${contact.first_name} ${contact.last_name}`,subject:`Proposal from S&S Contracting`,
                   text:`Hi ${contact.first_name},\n\nPlease click the link below to view and sign your proposal:\n\n${link}\n\nBest regards,\n${(dbUser&&dbUser.full_name)||"S&S Contracting"}\n(405) 201-4139`});
                 alert("Emailed to "+contact.email+"!");
               }} style={{padding:"8px 14px",background:"#C2562F",color:"#fff",border:"none",borderRadius:6,fontSize:12,fontWeight:700,cursor:"pointer"}}>📧 Email</button>
@@ -3368,7 +3368,7 @@ function PublicProposalViewer(){
 
 // ── Proposal Email Draft ──────────────────────────────────────────
 function ProposalEmailDraft({contact, proposalLink, repName}){
-  const [subject, setSubject] = React.useState(`Your S&S Contracting Proposal is Ready!`);
+  const [subject, setSubject] = React.useState(`Proposal`);
   const [body, setBody] = React.useState(
 `Hi ${contact.first_name},
 
@@ -3402,12 +3402,19 @@ sandscontractingco.com`
         subject,
         text: body,
         html:"<div style=\"font-family:Arial,sans-serif;font-size:14px;line-height:1.6;color:#333;max-width:600px;margin:0 auto;\">" +
-            "<div style=\"background:#2E2A21;padding:16px 20px;border-bottom:3px solid #4169E1;\">" +
-            "<div style=\"font-size:18px;font-weight:800;color:#fff;\">S&S Contracting Company LLC</div></div>" +
+            "<div style=\"background:#2E2A21;padding:16px 20px;border-bottom:3px solid #C2562F;\">" +
+            "<div style=\"font-size:18px;font-weight:800;color:#fff;\">S&S Contracting Company LLC</div>" +
+            "<div style=\"font-size:11px;color:#A9A18E;\">Roofing - Gutters - Outdoor Living</div></div>" +
             "<div style=\"padding:24px 20px;background:#fff;border:1px solid #ddd;border-top:none;\">" +
-            body.split("\n").map(l=>l.trim()?"<p style=\"margin:0 0 10px;\">"+l+"</p>":"<br/>").join("") +
+            "<p style=\"margin:0 0 12px;\">Hi " + contact.first_name + ",</p>" +
+            "<p style=\"margin:0 0 12px;\">Thank you for the opportunity to earn your business! Please click the button below to view your proposal, review the details, and sign to accept.</p>" +
+            "<div style=\"text-align:center;margin:24px 0;\">" +
+            "<a href=\"" + proposalLink + "\" style=\"display:inline-block;background:#C2562F;color:#fff;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:700;font-size:16px;\">View &amp; Sign My Proposal</a>" +
+            "</div>" +
+            "<p style=\"margin:0 0 12px;font-size:12px;color:#888;\">Or copy this link: <a href=\"" + proposalLink + "\">" + proposalLink + "</a></p>" +
+            "<p style=\"margin:0;\">Feel free to reach out with any questions!</p>" +
             "</div><div style=\"background:#F7F3E9;padding:12px 20px;font-size:11px;color:#888;\">" +
-            "S&S Contracting - 12200 Del Norte Way, Yukon, OK 73099 - (405) 201-4139</div></div>",
+            "<strong>" + repName + "</strong> | S&S Contracting | (405) 201-4139 | stacy@sandscontractingco.com</div></div>",
       });
       setSent(true);
     }catch(e){alert("Could not send: "+e.message);}
