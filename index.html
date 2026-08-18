@@ -1465,7 +1465,7 @@ function GutterProposalModal({contact, dbUser, onSave, onClose}){
             )}
           </div>
 
-          <Btn onClick={onClose} style={{width:"100%",justifyContent:"center",padding:"11px"}}>Done</Btn>
+          <Btn onClick={()=>{if(onSave)onSave();onClose();}} style={{width:"100%",justifyContent:"center",padding:"11px"}}>Done</Btn>
         </div>
       </div>
     );
@@ -2033,7 +2033,7 @@ function EmailHistoryTab({contactId}){
             <div style={{fontSize:13,fontWeight:700,color:C.dark}}>{e.subject}</div>
             <div style={{fontSize:10.5,color:C.muted,flexShrink:0,marginLeft:8}}>{new Date(e.sent_at).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}</div>
           </div>
-          <div style={{fontSize:11.5,color:C.sub,lineHeight:1.4,whiteSpace:"pre-line"}}>{(e.body&&e.body.slice)(0,150)}{(e.body&&e.body.length)>150?"…":""}</div>
+          <div style={{fontSize:11.5,color:C.sub,lineHeight:1.4,whiteSpace:"pre-line"}}>{(e.body||"").slice(0,150)}{(e.body||"").length>150?"…":""}</div>
         </div>
       ))}
     </div>
@@ -3914,18 +3914,18 @@ function App(){
 
       {showRoofProposal&&selected&&<RoofProposalModal
         contact={selected} dbUser={dbUser}
-        onSave={()=>setShowRoofProposal(false)}
+        onSave={()=>{}}
         onClose={()=>setShowRoofProposal(false)}/>}
 
       {showMiscProposal&&selected&&<MiscProposalModal
         contact={selected} dbUser={dbUser}
-        onSave={()=>setShowMiscProposal(false)}
+        onSave={()=>{}}
         onClose={()=>setShowMiscProposal(false)}/>}
 
       {showGutterProposal&&selected&&<GutterProposalModal
         contact={selected}
         dbUser={dbUser}
-        onSave={()=>setShowGutterProposal(false)}
+        onSave={()=>{}}
         onClose={()=>setShowGutterProposal(false)}/>}
 
       {showEditContact&&selected&&<EditContactModal
