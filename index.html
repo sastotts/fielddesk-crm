@@ -2122,23 +2122,13 @@ function EmailModal({contact, dbUser, onClose}){
         toName: `${contact.first_name} ${contact.last_name}`,
         subject,
         text: body,
-                  html: "<div style=\"font-family:Arial,sans-serif;font-size:14px;line-height:1.6;color:#333;max-width:600px;margin:0 auto;\">" +
-            "<div style=\"background:#2E2A21;padding:16px 24px;border-bottom:3px solid #4169E1;\">" +
-            "<div style=\"font-size:18px;font-weight:800;color:#fff;\">S&S Contracting Company LLC</div>" +
-            "<div style=\"font-size:11px;color:#A9A18E;margin-top:2px;\">Roofing - Gutters - Outdoor Living</div></div>" +
-            "<div style=\"padding:24px;background:#fff;border:1px solid #ddd;border-top:none;\">" +
-            "<p><a href=\"" + proposalLink + "\" style=\"display:inline-block;background:#C2562F;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px;\">View and Sign My Proposal</a></p>" +
-            body.split("\n").filter(l=>!l.includes(proposalLink)).map(l=>l.trim()?"<p style=\"margin:0 0 10px;\">"+l+"</p>":"<br/>").join("") +
-            "</div><div style=\"background:#F7F3E9;padding:12px 20px;font-size:11px;color:#888;border:1px solid #ddd;border-top:none;\">" +
-            "S&S Contracting Company LLC - 12200 Del Norte Way, Yukon, OK 73099 - (405) 201-4139" +
-            "</div></div>",
+                  html: null,
       });
       await logEmail();
       if(to && to !== contact.email){
         await sb.from("contacts").update({email:to}).eq("id",contact.id);
       }
       setSent(true);
-      setTimeout(()=>onClose(), 2000);
     } catch(e) {
       setError("Could not send email: " + e.message);
     } finally {
