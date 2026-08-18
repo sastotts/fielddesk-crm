@@ -3397,7 +3397,7 @@ sandscontractingco.com`
     setSending(true);
     try{
       await sendEmailViaResend({
-        to: to||contact.email,
+        to: contact.email,
         toName: `${contact.first_name} ${contact.last_name}`,
         subject,
         text: body,
