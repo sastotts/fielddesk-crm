@@ -2053,7 +2053,7 @@ async function sendEmailViaResend({to, toName, subject, html, text}){
       subject: subject,
       message: text,
       from_name: "S&S Contracting Company LLC",
-      reply_to: "info@sandscontractingco.com",
+      reply_to: "stacy@sandscontractingco.com",
     }
   );
   if(result.status !== 200) throw new Error("Failed to send email");
@@ -2062,89 +2062,35 @@ async function sendEmailViaResend({to, toName, subject, html, text}){
 
 function EmailModal({contact, dbUser, onClose}){
   const TEMPLATES = {
-    thankyou: {
-      subject: `Thank you for choosing S&S Contracting Company LLC!`,
-      body: `Hi ${contact.first_name},
-
-Thank you so much for choosing S&S Contracting Company LLC for your home improvement project! We truly appreciate your business and trust in us.
-
-We are committed to delivering the highest quality workmanship and will keep you informed every step of the way.
-
-If you have any questions before your project begins, please don't hesitate to reach out to us anytime.
-
-We look forward to working with you!
-
-Warm regards,
-${(dbUser&&dbUser.full_name)||""}
-S&S Contracting Company LLC
-(405) 201-4139
-sandscontractingco.com`
+    doorknock: {
+      subject: `Great meeting you today - S&S Contracting`,
+      body: `Hi ${contact.first_name},\n\nIt was great meeting you today! I wanted to follow up and introduce myself properly.\n\nI'm ${(dbUser&&dbUser.full_name)||"your S&S rep"} with S&S Contracting Company LLC. We specialize in Roofing, Gutters, and Outdoor Living projects right here in the Oklahoma City area.\n\nI'd love to schedule a FREE no-obligation inspection at your convenience - just reply or call anytime.\n\nThanks again for your time!\n\nBest regards,\n${(dbUser&&dbUser.full_name)||""}\nS&S Contracting Company LLC\n(405) 201-4139\nstacy@sandscontractingco.com`,
     },
     followup: {
-      subject: `S&S Contracting - Thank you for speaking with us!`,
-      body: `Hi ${contact.first_name},
-
-Thank you for taking the time to speak with me today about your home improvement needs. 
-
-At S&S Contracting Company LLC, we specialize in Roofing, Gutters, and Outdoor Living services and would love the opportunity to earn your business.
-
-I'd be happy to schedule a free inspection and estimate at your convenience. Please feel free to reach out anytime!
-
-Best regards,
-${(dbUser&&dbUser.full_name)||""}
-S&S Contracting Company LLC
-(405) 201-4139`
+      subject: `Following up - S&S Contracting`,
+      body: `Hi ${contact.first_name},\n\nI wanted to follow up from our recent conversation about your home improvement needs.\n\nAt S&S Contracting we take pride in quality Roofing, Gutters, and Outdoor Living projects on time and on budget.\n\nWould you be available for a free inspection this week?\n\nBest regards,\n${(dbUser&&dbUser.full_name)||""}\nS&S Contracting Company LLC\n(405) 201-4139\nstacy@sandscontractingco.com`,
     },
     proposal: {
-      subject: `S&S Contracting - Your Gutter Proposal`,
-      body: `Hi ${contact.first_name},
-
-Thank you for the opportunity to provide you with a proposal for your gutter project at ${contact.address||"your property"}.
-
-Please find your proposal attached. I'd love to answer any questions you may have.
-
-To accept this proposal, simply reply to this email or give me a call and we can get you scheduled right away!
-
-Best regards,
-${(dbUser&&dbUser.full_name)||""}
-S&S Contracting Company LLC
-(405) 201-4139`
+      subject: `Your proposal from S&S Contracting is ready`,
+      body: `Hi ${contact.first_name},\n\nThank you for the opportunity to put together a proposal for your project! Please review it at your convenience.\n\nI'm happy to answer any questions or make adjustments - just reply or call me directly.\n\nBest regards,\n${(dbUser&&dbUser.full_name)||""}\nS&S Contracting Company LLC\n(405) 201-4139\nstacy@sandscontractingco.com`,
     },
     appointment: {
-      subject: `S&S Contracting - Appointment Confirmation`,
-      body: `Hi ${contact.first_name},
-
-This is a friendly reminder about your upcoming appointment with S&S Contracting Company LLC.
-
-If you need to reschedule or have any questions, please don't hesitate to reach out.
-
-We look forward to seeing you!
-
-Best regards,
-${(dbUser&&dbUser.full_name)||""}
-S&S Contracting Company LLC
-(405) 201-4139`
+      subject: `Appointment confirmation - S&S Contracting`,
+      body: `Hi ${contact.first_name},\n\nThis is a friendly confirmation of your upcoming appointment with S&S Contracting Company LLC.\n\nIf you need to reschedule please don't hesitate to reach out!\n\nLooking forward to seeing you.\n\nBest regards,\n${(dbUser&&dbUser.full_name)||""}\nS&S Contracting Company LLC\n(405) 201-4139\nstacy@sandscontractingco.com`,
     },
     inspection: {
-      subject: `S&S Contracting - Free Inspection Offer`,
-      body: `Hi ${contact.first_name},
+      subject: `Free home inspection offer - S&S Contracting`,
+      body: `Hi ${contact.first_name},\n\nI wanted to offer you a FREE inspection of your home's roof and gutters - absolutely no obligation!\n\nWe'll give you an honest assessment in about 20-30 minutes. Would you be available this week?\n\nBest regards,\n${(dbUser&&dbUser.full_name)||""}\nS&S Contracting Company LLC\n(405) 201-4139\nstacy@sandscontractingco.com`,
+    },
+    thankyou: {
+      subject: `Thank you for choosing S&S Contracting!`,
+      body: `Hi ${contact.first_name},\n\nThank you so much for choosing S&S Contracting Company LLC! We truly appreciate your trust and your business.\n\nWe're committed to top quality workmanship and will keep you updated every step of the way.\n\nDon't hesitate to reach out anytime!\n\nWarm regards,\n${(dbUser&&dbUser.full_name)||""}\nS&S Contracting Company LLC\n(405) 201-4139\nstacy@sandscontractingco.com`,
+    },
+    };
 
-I wanted to follow up and let you know that we'd love to offer you a FREE inspection of your home's ${contact.service_type||"roof and gutters"}.
-
-There's absolutely no obligation — we just want to make sure your home is protected!
-
-Would you be available this week? Just reply to this email or call me directly.
-
-Best regards,
-${(dbUser&&dbUser.full_name)||""}
-S&S Contracting Company LLC
-(405) 201-4139`
-    }
-  };
-
-  const [template, setTemplate] = React.useState("followup");
-  const [subject, setSubject] = React.useState(TEMPLATES.followup.subject);
-  const [body, setBody] = React.useState(TEMPLATES.followup.body);
+  const [template, setTemplate] = React.useState("doorknock");
+  const [subject, setSubject] = React.useState(TEMPLATES.doorknock.subject);
+  const [body, setBody] = React.useState(TEMPLATES.doorknock.body);
   const [sending, setSending] = React.useState(false);
   const [sent, setSent] = React.useState(false);
   const [error, setError] = React.useState("");
@@ -2201,11 +2147,12 @@ S&S Contracting Company LLC
   };
 
   const TEMPLATE_LABELS = [
-    ["thankyou", "🙏 Thank You"],
+    ["doorknock", "🚪 Door Knock"],
     ["followup", "👋 Follow-Up"],
     ["proposal", "📄 Proposal"],
-    ["appointment", "📅 Appointment"],
-    ["inspection", "🔍 Free Inspection"],
+    ["appointment", "📅 Appt"],
+    ["inspection", "🔍 Inspection"],
+    ["thankyou", "🙏 Thank You"],
   ];
 
   return(
