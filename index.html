@@ -17,6 +17,7 @@
     ::-webkit-scrollbar{width:6px}
     ::-webkit-scrollbar-thumb{background:#C4BCA8;border-radius:3px}
     input,select,textarea,button{font-family:inherit;}
+    @keyframes slideDown{from{transform:translateY(-100%)}to{transform:translateY(0)}}
     @media print {
       body * { visibility: hidden; }
       #proposal-print-area, #proposal-print-area * { visibility: visible; }
@@ -3564,6 +3565,7 @@ function App(){
   const [showEditContact,setShowEditContact]=React.useState(false);
   const [showEditActivity,setShowEditActivity]=React.useState(null);
   const [showEmail,setShowEmail]=React.useState(false);
+  const [signedAlert,setSignedAlert]=React.useState(null);
   const [showGutterProposal,setShowGutterProposal]=React.useState(false);
   const [showRoofProposal,setShowRoofProposal]=React.useState(false);
   const [showMiscProposal,setShowMiscProposal]=React.useState(false);
@@ -3594,6 +3596,29 @@ function App(){
   },[]);
 
   React.useEffect(()=>{if(session)loadAll();},[session]);
+
+  // Real-time notification for signed proposals
+  React.useEffect(()=>{
+    if(!session) return;
+    const sub = sb.channel("proposal-signs")
+      .on("postgres_changes", {
+        event: "UPDATE",
+        schema: "public",
+        table: "proposals",
+      }, (payload) => {
+        const p = payload.new;
+        if(p.status==="Signed" && p.signed_at){
+          const signedAt = new Date(p.signed_at);
+          const now = new Date();
+          if((now - signedAt) < 15000){
+            setSignedAlert(p);
+            setTimeout(()=>setSignedAlert(null), 8000);
+          }
+        }
+      })
+      .subscribe();
+    return () => sb.removeChannel(sub);
+  },[session]);
   React.useEffect(()=>{if(selected){setNotes([]);loadNotes(selected.id);}setEditingStatus(false);},[(selected&&selected.id)]);
 
   const saveNote=async()=>{
@@ -3643,6 +3668,20 @@ function App(){
 
   return(
     <div style={{fontFamily:"-apple-system,sans-serif",background:"#EFE9DC",color:C.text,height:"100vh",display:"flex",flexDirection:"column",overflow:"hidden",fontSize:13}}>
+
+      {/* Signed proposal alert */}
+      {signedAlert&&(
+        <div style={{position:"fixed",top:0,left:0,right:0,zIndex:999,background:"#3D6E5C",color:"#fff",padding:"14px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",boxShadow:"0 4px 20px rgba(0,0,0,0.4)"}}>
+          <div style={{display:"flex",alignItems:"center",gap:12}}>
+            <span style={{fontSize:28}}>🎉</span>
+            <div>
+              <div style={{fontSize:15,fontWeight:800}}>Proposal Signed!</div>
+              <div style={{fontSize:12.5,opacity:0.9}}>A customer just accepted — ${parseFloat(signedAlert.total_amount||0).toLocaleString(undefined,{minimumFractionDigits:2})}</div>
+            </div>
+          </div>
+          <button onClick={()=>setSignedAlert(null)} style={{background:"rgba(255,255,255,0.25)",border:"none",borderRadius:6,color:"#fff",padding:"6px 14px",cursor:"pointer",fontSize:13,fontWeight:700}}>✕ Dismiss</button>
+        </div>
+      )}
 
       {/* TOP BAR */}
       <header style={{height:56,background:C.dark,display:"flex",alignItems:"center",padding:"0 16px",gap:18,flexShrink:0,borderBottom:`3px solid ${C.rust}`}}>
