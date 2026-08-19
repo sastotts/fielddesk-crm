@@ -3146,6 +3146,20 @@ function PublicProposalViewer(){
     </div>
   );
 
+  // Safety check - if contact failed to load, show error instead of crashing
+  if(!loading && !error && (!proposal || !contact)) return(
+    <div style={{height:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#EFE9DC",fontFamily:"Arial,sans-serif"}}>
+      <div style={{textAlign:"center",padding:40}}>
+        <div style={{fontSize:48,marginBottom:16}}>⚠</div>
+        <div style={{fontSize:18,fontWeight:700,color:"#2E2A21",marginBottom:8}}>Loading failed</div>
+        <div style={{fontSize:14,color:"#8A8170",marginBottom:20}}>Could not load proposal details. Please try again.</div>
+        <button onClick={()=>window.location.reload()} style={{padding:"10px 24px",background:"#C2562F",color:"#fff",border:"none",borderRadius:8,fontSize:14,fontWeight:700,cursor:"pointer"}}>
+          Try Again
+        </button>
+      </div>
+    </div>
+  );
+
   if(error) return(
     <div style={{height:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#EFE9DC",fontFamily:"Arial,sans-serif"}}>
       <div style={{textAlign:"center",padding:40}}>
@@ -3158,7 +3172,8 @@ function PublicProposalViewer(){
 
   if(!proposal||!contact) return null;
 
-  const pd = proposal.proposal_data||{};
+  const pd = (proposal&&proposal.proposal_data)||{};
+  const pContact = contact||{first_name:"",last_name:"",phone:"",address:"",city:"",state:"",zip:""};
   const today = new Date().toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"});
   const proposalDate = new Date(proposal.created_at).toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"});
   const isGutter = pd.type==="gutter"||pd.gutter_ft;
@@ -3173,7 +3188,7 @@ function PublicProposalViewer(){
         {/* Accepted banner */}
         {accepted&&(
           <div style={{background:"#3D6E5C",color:"#fff",borderRadius:10,padding:"14px 20px",marginBottom:20,display:"flex",alignItems:"center",gap:12,fontSize:14,fontWeight:700}}>
-            ✅ Proposal Accepted — Thank you {contact.first_name}! We'll be in touch shortly.
+            ✅ Proposal Accepted — Thank you {pContact.first_name}! We'll be in touch shortly.
           </div>
         )}
 
@@ -3198,16 +3213,16 @@ function PublicProposalViewer(){
           </div>
 
           {/* House photo */}
-          {(housePhoto||pd.has_house_photo||pd.house_photo||contact.house_photo)&&(
+          {(housePhoto||pd.has_house_photo||pd.house_photo||pContact.house_photo)&&(
             <div style={{padding:"0 28px 16px",borderBottom:"1px solid #EAE3D1"}}>
-              <img src={housePhoto||contact.house_photo} alt="Property" style={{width:"100%",maxHeight:220,objectFit:"cover",borderRadius:8}}/>
+              <img src={housePhoto||pContact.house_photo} alt="Property" style={{width:"100%",maxHeight:220,objectFit:"cover",borderRadius:8}}/>
             </div>
           )}
 
           {/* Customer info */}
           <div style={{background:"#F7F3E9",padding:"16px 28px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px 20px",borderBottom:"1px solid #EAE3D1"}}>
             {[
-              ["Customer",`${contact.first_name} ${contact.last_name}`],
+              ["Customer",`${pContact.first_name} ${pContact.last_name}`],
               ["Phone",contact.phone||"—"],
               ["Property Address",contact.address||"—"],
               ["City / State / ZIP",[contact.city,contact.state,contact.zip].filter(Boolean).join(", ")||"—"],
@@ -3349,7 +3364,7 @@ function PublicProposalViewer(){
               <div style={{border:"1px solid #3D6E5C",borderRadius:10,padding:"16px",background:"#F0FBF6"}}>
                 <div style={{fontSize:13,fontWeight:700,color:"#3D6E5C",marginBottom:8}}>✅ Proposal Accepted</div>
                 {(signature||pd.signature)&&<img src={signature||pd.signature} style={{maxHeight:70,display:"block",marginBottom:6}}/>}
-                <div style={{fontSize:12,color:"#5C5645"}}>{contact.first_name} {contact.last_name}</div>
+                <div style={{fontSize:12,color:"#5C5645"}}>{pContact.first_name} {pContact.last_name}</div>
                 <div style={{fontSize:11,color:"#8A8170"}}>Signed on {today}</div>
               </div>
             )}
