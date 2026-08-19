@@ -3213,9 +3213,9 @@ function PublicProposalViewer(){
           </div>
 
           {/* House photo */}
-          {(housePhoto||pd.has_house_photo||pd.house_photo||pContact.house_photo)&&(
+          {(pd.has_house_photo||pd.house_photo||pContact.house_photo)&&(
             <div style={{padding:"0 28px 16px",borderBottom:"1px solid #EAE3D1"}}>
-              <img src={housePhoto||pContact.house_photo} alt="Property" style={{width:"100%",maxHeight:220,objectFit:"cover",borderRadius:8}}/>
+              <img src={pContact.house_photo||pd.house_photo} alt="Property" style={{width:"100%",maxHeight:220,objectFit:"cover",borderRadius:8}}/>
             </div>
           )}
 
