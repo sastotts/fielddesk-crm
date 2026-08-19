@@ -3198,7 +3198,7 @@ function PublicProposalViewer(){
           {/* Header */}
           <div style={{borderBottom:"3px solid #4169E1",padding:"24px 28px",display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
             <div style={{display:"flex",alignItems:"center",gap:14}}>
-              <img src="${SS_LOGO}" alt="Logo" style={{width:65,height:65,objectFit:"contain",borderRadius:8,background:"#F4EFE6",padding:4}}/>
+              <img src={SS_LOGO} alt="Logo" style={{width:65,height:65,objectFit:"contain",borderRadius:8,background:"#F4EFE6",padding:4}}/>
               <div>
                 <div style={{fontSize:17,fontWeight:800,color:"#2E2A21"}}>S&amp;S Contracting Company LLC</div>
                 <div style={{fontSize:11,color:"#888",textTransform:"uppercase",letterSpacing:"0.5px",marginTop:2}}>Roofing · Gutters · Outdoor Living</div>
@@ -3223,9 +3223,9 @@ function PublicProposalViewer(){
           <div style={{background:"#F7F3E9",padding:"16px 28px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px 20px",borderBottom:"1px solid #EAE3D1"}}>
             {[
               ["Customer",`${pContact.first_name} ${pContact.last_name}`],
-              ["Phone",contact.phone||"—"],
-              ["Property Address",contact.address||"—"],
-              ["City / State / ZIP",[contact.city,contact.state,contact.zip].filter(Boolean).join(", ")||"—"],
+              ["Phone",pContact.phone||"—"],
+              ["Property Address",pContact.address||"—"],
+              ["City / State / ZIP",[pContact.city,pContact.state,pContact.zip].filter(Boolean).join(", ")||"—"],
             ].map(([label,value])=>(
               <div key={label}>
                 <div style={{fontSize:9,fontWeight:700,color:"#A9A18E",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:2}}>{label}</div>
