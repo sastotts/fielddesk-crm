@@ -1893,9 +1893,16 @@ function ProposalsTab({contactId, contact, onNew, dbUser}){
   const [viewingProposal, setViewingProposal] = React.useState(null);
   const [showFullPreview, setShowFullPreview] = React.useState(false);
 
-  React.useEffect(()=>{
+  const loadProposals = () => {
     sb.from("proposals").select("*").eq("contact_id", contactId).order("created_at",{ascending:false})
       .then(({data})=>setProposals(data||[]));
+  };
+
+  React.useEffect(()=>{
+    loadProposals();
+    // Auto-refresh every 30 seconds to catch new signatures
+    const interval = setInterval(loadProposals, 30000);
+    return () => clearInterval(interval);
   },[contactId]);
 
   const statusColor = s => s==="Signed"?C.sage:s==="Sent"?C.gold:s==="Declined"?"#999":C.sub;
@@ -1935,7 +1942,10 @@ function ProposalsTab({contactId, contact, onNew, dbUser}){
               <span style={{fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:10,background:statusColor(p.status)+"22",color:statusColor(p.status)}}>{p.status}</span>
             </div>
           </div>
-          <div style={{fontSize:11,color:C.muted,marginTop:4}}>👆 Click to view details</div>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:4}}>
+            <div style={{fontSize:11,color:C.muted}}>👆 Click to view details</div>
+            {p.view_count>0&&<div style={{fontSize:10.5,color:C.indigo,fontWeight:600}}>👁 Viewed {p.view_count}x</div>}
+          </div>
         </div>
       ))}
       
@@ -3135,6 +3145,31 @@ function PublicProposalViewer(){
       proposal_data: {...(proposal.proposal_data||{}), signature: sig},
     }).eq("id", proposal.id);
     setAccepted(true);
+
+    // Send notification email to S&S Contracting
+    try {
+      const repName = (proposal.proposal_data&&proposal.proposal_data.rep_name)||"Your rep";
+      const total = parseFloat(proposal.total_amount||0).toLocaleString(undefined,{minimumFractionDigits:2});
+      await emailjs.send(
+        "service_vmoglc5",
+        "template_1c7tnro",
+        {
+          to_name: "Stacy",
+          to_email: "stacy@sandscontractingco.com",
+          subject: `SIGNED: ${pContact.first_name} ${pContact.last_name} signed their proposal - $${total}`,
+          message: `Great news! ${pContact.first_name} ${pContact.last_name} just signed their proposal.
+
+Amount: $${total}
+Rep: ${repName}
+Signed at: ${new Date().toLocaleString()}
+
+Log into FieldDesk to view the signed proposal.`,
+          from_name: "FieldDesk CRM",
+          reply_to: "stacy@sandscontractingco.com",
+        },
+        "p7gS6kLQdHLdyi0Xd"
+      );
+    } catch(e) { console.log("Notification email failed:", e); }
   };
 
   if(loading) return(
