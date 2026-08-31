@@ -850,10 +850,10 @@ function CalendarView({activities, contacts, users, dbUser, onActivityClick, onN
                 <button key={u.id} onClick={()=>setRepFilter(u.id)}
                   style={{display:"flex",alignItems:"center",gap:9,padding:"10px 14px",border:"none",background:isSelected?"#fff":"transparent",cursor:"pointer",textAlign:"left",borderRight:isSelected?`3px solid ${C.rust}`:"3px solid transparent"}}>
                   <div style={{width:30,height:30,borderRadius:"50%",background:ac,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,flexShrink:0}}>
-                    {(u.full_name&&u.full_name.split)(" ").map(n=>n[0]).join("").slice(0,2)||"?"}
+                    {(u.full_name||"?").split(" ").map(n=>n[0]).join("").slice(0,2)||"?"}
                   </div>
                   <div>
-                    <div style={{fontSize:12.5,fontWeight:700,color:C.dark}}>{(u.full_name&&u.full_name.split)(" ")[0]}</div>
+                    <div style={{fontSize:12.5,fontWeight:700,color:C.dark}}>{(u.full_name||"").split(" ")[0]}</div>
                     <div style={{fontSize:10,color:C.sub,textTransform:"capitalize"}}>{u.role} · {count} activities</div>
                   </div>
                 </button>
