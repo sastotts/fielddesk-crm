@@ -2065,6 +2065,7 @@ async function sendEmailViaResend({to, toName, subject, html, text}){
       message: text,
       from_name: "S&S Contracting Company LLC",
       reply_to: "stacy@sandscontractingco.com",
+      bcc_email: "stacy@sandscontractingco.com",
     }
   );
   if(result.status !== 200) throw new Error("Failed to send email");
