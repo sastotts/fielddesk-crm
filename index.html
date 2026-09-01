@@ -527,6 +527,7 @@ function CalendarView({activities, contacts, users, dbUser, onActivityClick, onN
   const isManager = (dbUser&&dbUser.role)==="manager"||(dbUser&&dbUser.role)==="admin";
 
   const filtered = (activities||[]).filter(a => {
+    if(a.is_completed) return false;  // Hide completed from calendar
     if(repFilter==="mine") return a.assigned_user_id===(dbUser&&dbUser.id);
     if(repFilter==="all") return true;
     return a.assigned_user_id===repFilter;
@@ -3979,7 +3980,7 @@ function App(){
               </div>
 
               <div style={{display:"flex",gap:7,padding:"4px 22px 14px",flexWrap:"wrap"}}>
-                <Btn>📞 Log Call</Btn>
+                <Btn onClick={()=>setShowNewActivity(true)}>📞 Log Call</Btn>
                 <Btn onClick={()=>setShowEmail(true)}>✉️ Send Email</Btn>
                 <div style={{position:"relative",display:"inline-block"}} className="proposal-menu">
                   <Btn primary onClick={()=>setShowGutterProposal(true)}>📄 Gutter Proposal</Btn>
@@ -4022,13 +4023,13 @@ function App(){
                 {activeTab==="Activities"&&(
                   <div>
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-                      <div style={{fontSize:11,fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:0.5}}>All Activities</div>
+                      <div style={{fontSize:11,fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:0.5}}>Open Activities</div>
                       <Btn onClick={()=>setShowNewActivity(true)} style={{padding:"5px 10px",fontSize:11.5}}>+ New Activity</Btn>
                     </div>
-                    {(activities||[]).filter(a=>a.contact_id===selected.id).length===0
-                      ?<div style={{textAlign:"center",padding:"24px 0",color:C.muted,fontSize:12.5}}>No activities yet for this contact.</div>
-                      :(activities||[]).filter(a=>a.contact_id===selected.id)
-                        .sort((a,b)=>new Date(b.due_date)-new Date(a.due_date))
+                    {(activities||[]).filter(a=>a.contact_id===selected.id&&!a.is_completed).length===0
+                      ?<div style={{textAlign:"center",padding:"16px 0",color:C.muted,fontSize:12.5}}>No open activities.</div>
+                      :(activities||[]).filter(a=>a.contact_id===selected.id&&!a.is_completed)
+                        .sort((a,b)=>new Date(a.due_date)-new Date(b.due_date))
                         .map(a=>{
                           const d=a.due_date?new Date(a.due_date):null;
                           const assignedUser=(users||[]).find(u=>u.id===a.assigned_user_id);
@@ -4057,6 +4058,29 @@ function App(){
                           );
                         })
                     }
+                    {/* Completed activity history */}
+                    {(activities||[]).filter(a=>a.contact_id===selected.id&&a.is_completed).length>0&&(
+                      <div style={{marginTop:16}}>
+                        <div style={{fontSize:11,fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:0.5,marginBottom:8}}>History</div>
+                        {(activities||[]).filter(a=>a.contact_id===selected.id&&a.is_completed)
+                          .sort((a,b)=>new Date(b.completed_at)-new Date(a.completed_at))
+                          .map(a=>{
+                            const d=a.completed_at?new Date(a.completed_at):null;
+                            return(
+                              <div key={a.id} style={{background:"#fff",border:`1px solid ${C.sage}44`,borderRadius:8,padding:"10px 13px",marginBottom:6,opacity:0.8}}>
+                                <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                                  <span style={{fontSize:16}}>✅</span>
+                                  <div style={{flex:1}}>
+                                    <div style={{fontSize:12,fontWeight:600,color:C.muted,textDecoration:"line-through"}}>{a.subject}</div>
+                                    {a.completion_note&&<div style={{fontSize:11.5,color:C.sub,marginTop:3,fontStyle:"italic"}}>"{a.completion_note}"</div>}
+                                    {d&&<div style={{fontSize:10.5,color:C.muted,marginTop:2}}>Done {d.toLocaleDateString("en-US",{month:"short",day:"numeric"})}</div>}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                      </div>
+                    )}
                   </div>
                 )}
                 {activeTab==="Proposals"&&<ProposalsTab contactId={selected.id} contact={selected} dbUser={dbUser} onNew={()=>setShowGutterProposal(true)} onNewRoof={()=>setShowRoofProposal(true)} onNewMisc={()=>setShowMiscProposal(true)}/>}
@@ -4078,9 +4102,9 @@ function App(){
               <div style={{fontSize:11,color:C.muted,marginTop:1}}>{new Date().toLocaleDateString("en-US",{weekday:"long",month:"short",day:"numeric"})}</div>
             </div>
             <div style={{flex:1,overflowY:"auto",display:"flex",flexDirection:"column",gap:7}}>
-              {activities===null?<Spinner/>:(activities||[]).length===0
-                ?<div style={{textAlign:"center",padding:"20px 10px",color:C.muted,fontSize:12}}>No activities yet.</div>
-                :(activities||[]).map(a=>{
+              {activities===null?<Spinner/>:(activities||[]).filter(a=>!a.is_completed).length===0
+                ?<div style={{textAlign:"center",padding:"20px 10px",color:C.muted,fontSize:12}}>No open activities!</div>
+                :(activities||[]).filter(a=>!a.is_completed).map(a=>{
                   const contact=(contacts||[]).find(c=>c.id===a.contact_id);
                   const assignedUser=(users||[]).find(u=>u.id===a.assigned_user_id);
                   const d=a.due_date?new Date(a.due_date):null;
