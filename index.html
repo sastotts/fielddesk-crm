@@ -3507,6 +3507,127 @@ sandscontractingco.com`
 }
 
 
+// ── Call List View ─────────────────────────────────────────────────
+function CallListView({contacts, activities, users, dbUser, onSelectContact}){
+  const today = new Date().toDateString();
+  const myId = dbUser&&dbUser.id;
+  const isManager = (dbUser&&dbUser.role)==="manager"||(dbUser&&dbUser.role)==="admin";
+
+  // Build call list: contacts with open activities due today or overdue
+  const callList = React.useMemo(()=>{
+    const actMap = {};
+    (activities||[]).forEach(a=>{
+      if(a.is_completed) return;
+      if(!isManager && a.assigned_user_id !== myId) return;
+      const due = a.due_date ? new Date(a.due_date) : null;
+      const isOverdue = due && due < new Date();
+      const isDueToday = due && due.toDateString() === today;
+      if(isOverdue || isDueToday || !due){
+        if(!actMap[a.contact_id]) actMap[a.contact_id] = [];
+        actMap[a.contact_id].push({...a, isOverdue, isDueToday});
+      }
+    });
+
+    return (contacts||[])
+      .filter(c => actMap[c.id])
+      .map(c => ({
+        contact: c,
+        activities: actMap[c.id].sort((a,b)=>a.isOverdue?-1:1),
+        priority: actMap[c.id].some(a=>a.isOverdue) ? "overdue" : "today",
+      }))
+      .sort((a,b)=> a.priority==="overdue"&&b.priority!=="overdue"?-1:1);
+  },[contacts,activities,dbUser]);
+
+  // Also include contacts with no activities but flagged as new leads
+  const newLeads = (contacts||[]).filter(c=>{
+    if(!isManager && c.assigned_rep_id !== myId) return false;
+    const hasActivity = (activities||[]).some(a=>a.contact_id===c.id&&!a.is_completed);
+    return !hasActivity && c.status==="New Lead";
+  });
+
+  const priorityColor = p => p==="overdue"?"#C2562F":p==="today"?C.gold:C.sub;
+  const priorityLabel = p => p==="overdue"?"OVERDUE":p==="today"?"TODAY":"NEW";
+
+  return(
+    <div style={{flex:1,display:"flex",flexDirection:"column",overflowY:"auto",background:C.cream}}>
+      <div style={{padding:"14px 16px",borderBottom:`1px solid ${C.border}`,background:"#fff"}}>
+        <div style={{fontSize:16,fontWeight:800,color:C.dark}}>📞 Call List</div>
+        <div style={{fontSize:12,color:C.sub,marginTop:2}}>{callList.length} contacts need attention today</div>
+      </div>
+
+      {callList.length===0&&newLeads.length===0?(
+        <div style={{textAlign:"center",padding:"40px 20px",color:C.muted}}>
+          <div style={{fontSize:36,marginBottom:12}}>🎉</div>
+          <div style={{fontSize:15,fontWeight:700,color:C.sub}}>All caught up!</div>
+          <div style={{fontSize:12,marginTop:4}}>No calls due today</div>
+        </div>
+      ):(
+        <div style={{padding:"12px 16px",display:"flex",flexDirection:"column",gap:10}}>
+
+          {callList.map(({contact:c, activities:acts, priority})=>(
+            <div key={c.id} style={{background:"#fff",border:`2px solid ${priorityColor(priority)}22`,borderLeft:`4px solid ${priorityColor(priority)}`,borderRadius:8,padding:"12px 14px",cursor:"pointer"}}
+              onClick={()=>onSelectContact(c)}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
+                <div style={{display:"flex",alignItems:"center",gap:10}}>
+                  {c.house_photo
+                    ? <img src={c.house_photo} alt="House" style={{width:40,height:40,borderRadius:6,objectFit:"cover",flexShrink:0}}/>
+                    : <div style={{width:40,height:40,borderRadius:"50%",background:C.rust,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,flexShrink:0}}>{(c.first_name&&c.first_name[0])}{(c.last_name&&c.last_name[0])}</div>
+                  }
+                  <div>
+                    <div style={{fontSize:14,fontWeight:700,color:C.dark}}>{c.first_name} {c.last_name}</div>
+                    <div style={{fontSize:11.5,color:C.sub}}>{c.address||c.phone||"No address"}</div>
+                  </div>
+                </div>
+                <span style={{fontSize:10,fontWeight:700,padding:"3px 8px",borderRadius:10,background:priorityColor(priority)+"22",color:priorityColor(priority),flexShrink:0}}>
+                  {priorityLabel(priority)}
+                </span>
+              </div>
+              {acts.map(a=>(
+                <div key={a.id} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 10px",background:C.tan,borderRadius:6,marginBottom:6}}>
+                  <span style={{fontSize:13}}>{a.type==="Call"?"📞":a.type==="Meeting"?"📅":a.type==="Email"?"✉️":"📋"}</span>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:12.5,fontWeight:600,color:C.dark}}>{a.title||a.type}</div>
+                    {a.due_date&&<div style={{fontSize:11,color:a.isOverdue?C.rust:C.muted}}>
+                      {a.isOverdue?"Overdue: ":""}{new Date(a.due_date).toLocaleDateString("en-US",{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"})}
+                    </div>}
+                  </div>
+                  <a href={`tel:${c.phone}`} onClick={e=>e.stopPropagation()}
+                    style={{background:C.sage,color:"#fff",border:"none",borderRadius:6,padding:"6px 12px",fontSize:12,fontWeight:700,cursor:"pointer",textDecoration:"none",display:"flex",alignItems:"center",gap:4}}>
+                    📞 Call
+                  </a>
+                </div>
+              ))}
+              {c.phone&&<div style={{fontSize:11.5,color:C.sub,marginTop:4}}>📱 {c.phone}</div>}
+            </div>
+          ))}
+
+          {newLeads.length>0&&(
+            <div>
+              <div style={{fontSize:11,fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:0.5,margin:"8px 0"}}>New Leads — No Activity Scheduled</div>
+              {newLeads.map(c=>(
+                <div key={c.id} style={{background:"#fff",border:`1px solid ${C.border}`,borderLeft:`4px solid ${C.indigo}`,borderRadius:8,padding:"12px 14px",cursor:"pointer",marginBottom:8}}
+                  onClick={()=>onSelectContact(c)}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                    <div>
+                      <div style={{fontSize:14,fontWeight:700,color:C.dark}}>{c.first_name} {c.last_name}</div>
+                      <div style={{fontSize:11.5,color:C.sub}}>{c.phone||"No phone"} · {c.service_type||""}</div>
+                    </div>
+                    {c.phone&&<a href={`tel:${c.phone}`} onClick={e=>e.stopPropagation()}
+                      style={{background:C.indigo,color:"#fff",border:"none",borderRadius:6,padding:"6px 12px",fontSize:12,fontWeight:700,cursor:"pointer",textDecoration:"none"}}>
+                      📞 Call
+                    </a>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+
 // ── Login ────────────────────────────────────────────────────────
 function Login({onLogin}){
   const [email,setEmail]=React.useState("sastotts@hotmail.com");
@@ -3638,11 +3759,34 @@ function App(){
     setEditingStatus(false);
   };
 
+  const [showCompleteNote, setShowCompleteNote] = React.useState(null);
+  const [completeNoteText, setCompleteNoteText] = React.useState("");
+
   const completeActivity=async(a)=>{
-    await sb.from("activities").update({is_completed:true,completed_at:new Date().toISOString()}).eq("id",a.id);
-    setActivities(p=>p.map(x=>x.id===a.id?{...x,is_completed:true}:x));
-    setDoneContact((contacts||[]).find(c=>c.id===a.contact_id));
     setShowActivityDetail(null);
+    setCompleteNoteText("");
+    setShowCompleteNote(a);
+  };
+
+  const confirmComplete=async()=>{
+    const a = showCompleteNote;
+    await sb.from("activities").update({
+      is_completed:true,
+      completed_at:new Date().toISOString(),
+      completion_note: completeNoteText||null,
+    }).eq("id",a.id);
+    setActivities(p=>p.map(x=>x.id===a.id?{...x,is_completed:true,completion_note:completeNoteText}:x));
+    // Save note to contact notes if text entered
+    if(completeNoteText.trim()){
+      await sb.from("notes").insert({
+        contact_id: a.contact_id,
+        created_by: dbUser?.id||dbUser&&dbUser.id,
+        content: `[${a.type||"Activity"} completed] ${completeNoteText}`,
+      });
+    }
+    setShowCompleteNote(null);
+    setCompleteNoteText("");
+    setDoneContact((contacts||[]).find(c=>c.id===a.contact_id));
     setShowDonePrompt(true);
   };
 
@@ -3971,6 +4115,13 @@ function App(){
         </React.Fragment>}
 
         {/* PIPELINE VIEW */}
+        {view==="calls"&&<CallListView
+          contacts={contacts}
+          activities={activities}
+          users={users}
+          dbUser={dbUser}
+          onSelectContact={c=>{setSelected(c);setView("contacts");}}/>}
+
         {view==="pipeline"&&<PipelineView contacts={contacts||[]} users={users} dbUser={dbUser} onSelectContact={c=>{setSelected(c);setView("contacts");}}/>}
 
         {/* CALENDAR VIEW */}
@@ -4003,6 +4154,30 @@ function App(){
         contacts={contacts||[]} users={users}
         onSave={a=>{setActivities(p=>[a,...(p||[])]);setShowNewActivity(false);}}
         onClose={()=>setShowNewActivity(false)}/>}
+
+      {/* Complete Activity with Note Modal */}
+      {showCompleteNote&&(
+        <div style={{position:"fixed",inset:0,background:"rgba(46,42,33,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:200,padding:16}}>
+          <div style={{background:C.cream,borderRadius:12,width:440,boxShadow:"0 16px 50px rgba(0,0,0,0.28)"}}>
+            <div style={{background:C.sage,padding:"14px 20px",borderRadius:"12px 12px 0 0"}}>
+              <div style={{fontSize:15,fontWeight:700,color:"#fff"}}>✅ Mark Complete</div>
+              <div style={{fontSize:12,color:"rgba(255,255,255,0.85)",marginTop:2}}>{showCompleteNote.type||"Activity"} — {showCompleteNote.title||""}</div>
+            </div>
+            <div style={{padding:"20px"}}>
+              <div style={{fontSize:12,fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:0.5,marginBottom:8}}>Completion Note (optional)</div>
+              <textarea value={completeNoteText} onChange={e=>setCompleteNoteText(e.target.value)}
+                rows={4} autoFocus
+                placeholder="What happened? Left voicemail, spoke with customer, scheduled follow-up..."
+                style={{width:"100%",padding:"10px 12px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:13,resize:"none",outline:"none",boxSizing:"border-box",lineHeight:1.5}}/>
+              <div style={{fontSize:11,color:C.muted,marginTop:6}}>Note will be saved to the contact's Notes tab</div>
+              <div style={{display:"flex",gap:10,marginTop:16}}>
+                <Btn primary onClick={confirmComplete} style={{flex:1,justifyContent:"center",padding:"11px"}}>✅ Complete</Btn>
+                <Btn onClick={()=>setShowCompleteNote(null)} style={{justifyContent:"center",padding:"11px"}}>Cancel</Btn>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showEmail&&selected&&<EmailModal
         contact={selected}
