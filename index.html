@@ -47,7 +47,7 @@ const SOURCES=["Manual Entry","Website Form","Facebook Ad","Referral","Door Knoc
 const EMAILJS_SERVICE_ID = "service_vmoglc5";
 const EMAILJS_TEMPLATE_ID = "template_1c7tnro";
 const EMAILJS_PUBLIC_KEY = "p7gS6kLQdHLdyi0Xd";
-const SS_LOGO = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj4KICA8IS0tIFJvb2YgLS0+CiAgPHBvbHlsaW5lIHBvaW50cz0iNSw0NSA1MCw4IDk1LDQ1IiBzdHJva2U9IiM0MTY5RTEiIHN0cm9rZS13aWR0aD0iOSIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+CiAgPCEtLSBMZWZ0IFMgLS0+CiAgPHBhdGggZD0iTTE4LDU4IFExOCw1MCAyNiw1MCBRMzQsNTAgMzQsNTggUTM0LDY1IDI2LDY1IFExOCw2NSAxOCw3MiBRMTgsODAgMjYsODAgUTM0LDgwIDM0LDcyIiBzdHJva2U9IiM0MTY5RTEiIHN0cm9rZS13aWR0aD0iNyIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CiAgPCEtLSBSaWdodCBTIC0tPgogIDxwYXRoIGQ9Ik00MCw1OCBRNDAsNTAgNDgsNTAgUTU2LDUwIDU2LDU4IFE1Niw2NSA0OCw2NSBRNDAsNjUgNDAsNzIgUTQwLDgwIDQ4LDgwIFE1Niw4MCA1Niw3MiIgc3Ryb2tlPSIjNDE2OUUxIiBzdHJva2Utd2lkdGg9IjciIGZpbGw9Im5vbmUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgo8L3N2Zz4=";
+const SS_LOGO = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMDAgMjAwIj4KICA8IS0tIFJvb2YgcGVhayAtLT4KICA8cG9seWxpbmUgcG9pbnRzPSIxMCw5MCAxMDAsMTUgMTkwLDkwIiBzdHJva2U9IiM0MTY5RTEiIHN0cm9rZS13aWR0aD0iMTgiIGZpbGw9Im5vbmUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPgogIDwhLS0gTGVmdCBTIC0gcHJvcGVyIFMgc2hhcGUgY3VydmluZyByaWdodCBhdCB0b3AsIGxlZnQgYXQgYm90dG9tIC0tPgogIDxwYXRoIGQ9Ik0zNSwxMTggUTM1LDEwMCA1MiwxMDAgUTY5LDEwMCA2OSwxMTYgUTY5LDEzMCA1MiwxMzAgUTM1LDEzMCAzNSwxNDYgUTM1LDE2MiA1MiwxNjIgUTY5LDE2MiA2OSwxNDgiIAogICAgICAgIHN0cm9rZT0iIzQxNjlFMSIgc3Ryb2tlLXdpZHRoPSIxNCIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+CiAgPCEtLSBSaWdodCBTIC0gc2FtZSBkaXJlY3Rpb24gLS0+CiAgPHBhdGggZD0iTTgxLDExOCBRODEsMTAwIDk4LDEwMCBRMTE1LDEwMCAxMTUsMTE2IFExMTUsMTMwIDk4LDEzMCBRODEsMTMwIDgxLDE0NiBRODEsMTYyIDk4LDE2MiBRMTE1LDE2MiAxMTUsMTQ4IiAKICAgICAgICBzdHJva2U9IiM0MTY5RTEiIHN0cm9rZS13aWR0aD0iMTQiIGZpbGw9Im5vbmUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPgo8L3N2Zz4=";
 const MONTHS_SHORT=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 const MONTHS_LONG=["January","February","March","April","May","June","July","August","September","October","November","December"];
 const DAYS_SHORT=["Su","Mo","Tu","We","Th","Fr","Sa"];
@@ -3683,6 +3683,287 @@ function CallListView({contacts, activities, users, dbUser, onSelectContact}){
 }
 
 
+// ── Property Locations Tab ─────────────────────────────────────────
+function PropertyLocationsTab({contact, contactId}){
+  const [locations, setLocations] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+  const [showAdd, setShowAdd] = React.useState(false);
+  const [newLoc, setNewLoc] = React.useState({label:"",address:"",city:"",state:"OK",zip:"",notes:""});
+  const [saving, setSaving] = React.useState(false);
+
+  React.useEffect(()=>{
+    sb.from("contacts").select("property_locations").eq("id",contactId).single()
+      .then(({data})=>{
+        if(data&&data.property_locations) setLocations(data.property_locations);
+        setLoading(false);
+      });
+  },[contactId]);
+
+  const saveLocation = async() => {
+    if(!newLoc.address){return;}
+    setSaving(true);
+    const updated = [...locations, {...newLoc, id: Date.now()}];
+    await sb.from("contacts").update({property_locations: updated}).eq("id", contactId);
+    setLocations(updated);
+    setNewLoc({label:"",address:"",city:"",state:"OK",zip:"",notes:""});
+    setShowAdd(false);
+    setSaving(false);
+  };
+
+  const deleteLocation = async(id) => {
+    const updated = locations.filter(l=>l.id!==id);
+    await sb.from("contacts").update({property_locations: updated}).eq("id", contactId);
+    setLocations(updated);
+  };
+
+  const s = k => e => setNewLoc(p=>({...p,[k]:e.target.value}));
+
+  return(
+    <div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+        <div style={{fontSize:11,fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:0.5}}>Property Locations</div>
+        <Btn primary onClick={()=>setShowAdd(true)} style={{padding:"5px 10px",fontSize:11.5}}>+ Add Property</Btn>
+      </div>
+
+      {/* Primary address always shown */}
+      <div style={{background:"#fff",border:`2px solid ${C.sage}`,borderRadius:8,padding:"12px 14px",marginBottom:10}}>
+        <div style={{fontSize:10,fontWeight:700,color:C.sage,textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>Primary Address</div>
+        <div style={{fontSize:13,fontWeight:700,color:C.dark}}>{contact.address||"No address on file"}</div>
+        {contact.city&&<div style={{fontSize:12,color:C.sub}}>{contact.city}, {contact.state} {contact.zip}</div>}
+        {contact.address&&(
+          <button onClick={()=>{const a=encodeURIComponent(`${contact.address} ${contact.city} ${contact.state}`);window.open(`https://www.google.com/maps/search/?api=1&query=${a}`,"_blank");}}
+            style={{fontSize:11,color:C.indigo,background:"none",border:"none",cursor:"pointer",fontWeight:600,marginTop:4,padding:0}}>
+            🗺️ Open in Maps
+          </button>
+        )}
+      </div>
+
+      {loading?<Spinner/>:locations.length===0&&!showAdd?(
+        <div style={{textAlign:"center",padding:"20px",color:C.muted,fontSize:12.5}}>
+          No additional properties. Click "+ Add Property" for rental properties or multiple locations.
+        </div>
+      ):locations.map(loc=>(
+        <div key={loc.id} style={{background:"#fff",border:`1px solid ${C.border}`,borderRadius:8,padding:"12px 14px",marginBottom:8}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+            <div style={{flex:1}}>
+              {loc.label&&<div style={{fontSize:10,fontWeight:700,color:C.rust,textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>{loc.label}</div>}
+              <div style={{fontSize:13,fontWeight:700,color:C.dark}}>{loc.address}</div>
+              {loc.city&&<div style={{fontSize:12,color:C.sub}}>{loc.city}, {loc.state} {loc.zip}</div>}
+              {loc.notes&&<div style={{fontSize:11.5,color:C.muted,marginTop:4,fontStyle:"italic"}}>{loc.notes}</div>}
+              <div style={{display:"flex",gap:10,marginTop:6}}>
+                <button onClick={()=>{const a=encodeURIComponent(`${loc.address} ${loc.city} ${loc.state}`);window.open(`https://www.google.com/maps/search/?api=1&query=${a}`,"_blank");}}
+                  style={{fontSize:11,color:C.indigo,background:"none",border:"none",cursor:"pointer",fontWeight:600,padding:0}}>
+                  🗺️ Maps
+                </button>
+                <a href={`tel:${contact.phone}`} style={{fontSize:11,color:C.sage,fontWeight:600,textDecoration:"none"}}>📞 Call Owner</a>
+              </div>
+            </div>
+            <button onClick={()=>deleteLocation(loc.id)}
+              style={{background:"none",border:"none",cursor:"pointer",color:C.rust,fontSize:16,padding:"0 4px",flexShrink:0}}>✕</button>
+          </div>
+        </div>
+      ))}
+
+      {showAdd&&(
+        <div style={{background:C.tan,border:`1px solid ${C.border}`,borderRadius:8,padding:"14px",marginTop:8}}>
+          <div style={{fontSize:12,fontWeight:700,color:C.dark,marginBottom:10}}>Add Property Location</div>
+          <div style={{display:"flex",flexDirection:"column",gap:8}}>
+            <input value={newLoc.label} onChange={s("label")} placeholder='Label (e.g. "Rental #1", "Main St property")'
+              style={{padding:"8px 10px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:12.5,outline:"none"}}/>
+            <input value={newLoc.address} onChange={s("address")} placeholder="Street Address *"
+              style={{padding:"8px 10px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:12.5,outline:"none"}}/>
+            <div style={{display:"grid",gridTemplateColumns:"1fr auto auto",gap:6}}>
+              <input value={newLoc.city} onChange={s("city")} placeholder="City"
+                style={{padding:"8px 10px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:12.5,outline:"none"}}/>
+              <input value={newLoc.state} onChange={s("state")} placeholder="ST" maxLength={2}
+                style={{width:42,padding:"8px 6px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:12.5,outline:"none",textAlign:"center"}}/>
+              <input value={newLoc.zip} onChange={s("zip")} placeholder="ZIP"
+                style={{width:70,padding:"8px 8px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:12.5,outline:"none"}}/>
+            </div>
+            <input value={newLoc.notes} onChange={s("notes")} placeholder="Notes (e.g. tenant name, gate code)"
+              style={{padding:"8px 10px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:12.5,outline:"none"}}/>
+            <div style={{display:"flex",gap:8}}>
+              <Btn primary onClick={saveLocation} disabled={saving||!newLoc.address} style={{flex:1,justifyContent:"center"}}>
+                {saving?"Saving...":"💾 Save Location"}
+              </Btn>
+              <Btn onClick={()=>setShowAdd(false)} style={{justifyContent:"center"}}>Cancel</Btn>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Documents & Forms Tab ──────────────────────────────────────────
+function DocumentsFormsTab({contact, dbUser}){
+  const [showAuthForm, setShowAuthForm] = React.useState(false);
+
+  return(
+    <div>
+      <div style={{fontSize:11,fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:0.5,marginBottom:12}}>Forms & Documents</div>
+      
+      {/* Available forms */}
+      <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:16}}>
+        <div style={{background:"#fff",border:`1px solid ${C.border}`,borderRadius:8,padding:"12px 14px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <div>
+            <div style={{fontSize:13,fontWeight:700,color:C.dark}}>📋 Third Party Authorization</div>
+            <div style={{fontSize:11.5,color:C.sub,marginTop:2}}>Insurance authorization form — pre-filled with customer info</div>
+          </div>
+          <Btn primary onClick={()=>setShowAuthForm(true)} style={{padding:"7px 14px",fontSize:12,flexShrink:0}}>Generate</Btn>
+        </div>
+
+        <div style={{background:"#fff",border:`1px solid ${C.border}`,borderRadius:8,padding:"12px 14px",display:"flex",justifyContent:"space-between",alignItems:"center",opacity:0.6}}>
+          <div>
+            <div style={{fontSize:13,fontWeight:700,color:C.dark}}>📄 Work Order</div>
+            <div style={{fontSize:11.5,color:C.sub,marginTop:2}}>Coming soon</div>
+          </div>
+          <Btn style={{padding:"7px 14px",fontSize:12,flexShrink:0}} disabled>Generate</Btn>
+        </div>
+
+        <div style={{background:"#fff",border:`1px solid ${C.border}`,borderRadius:8,padding:"12px 14px",display:"flex",justifyContent:"space-between",alignItems:"center",opacity:0.6}}>
+          <div>
+            <div style={{fontSize:13,fontWeight:700,color:C.dark}}>📄 Material Order</div>
+            <div style={{fontSize:11.5,color:C.sub,marginTop:2}}>Coming soon</div>
+          </div>
+          <Btn style={{padding:"7px 14px",fontSize:12,flexShrink:0}} disabled>Generate</Btn>
+        </div>
+      </div>
+
+      {/* Third Party Auth Form */}
+      {showAuthForm&&<ThirdPartyAuthForm contact={contact} dbUser={dbUser} onClose={()=>setShowAuthForm(false)}/>}
+    </div>
+  );
+}
+
+// ── Third Party Authorization Form ────────────────────────────────
+function ThirdPartyAuthForm({contact, dbUser, onClose}){
+  const today = new Date().toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"});
+  const [insurer, setInsurer] = React.useState("");
+  const [claimNo, setClaimNo] = React.useState("");
+  const [policyNo, setPolicyNo] = React.useState("");
+  const [signature, setSignature] = React.useState(null);
+  const [showSigPad, setShowSigPad] = React.useState(false);
+
+  const print = () => {
+    const html = `<!DOCTYPE html><html><head><title>Third Party Authorization</title>
+    <style>*{margin:0;padding:0;box-sizing:border-box;}body{font-family:Arial,sans-serif;font-size:13px;color:#222;padding:40px;max-width:720px;margin:0 auto;}
+    h1{font-size:18px;font-weight:800;color:#2E2A21;margin-bottom:4px;}
+    h2{font-size:14px;font-weight:700;color:#C2562F;margin-bottom:20px;}
+    .section{margin-bottom:20px;}
+    .label{font-size:10px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:3px;}
+    .value{font-size:13px;font-weight:600;color:#2E2A21;border-bottom:1px solid #ccc;padding-bottom:4px;min-height:22px;}
+    .body-text{font-size:12.5px;line-height:1.7;color:#333;margin-bottom:16px;}
+    .sig-line{border-bottom:2px solid #222;width:320px;height:60px;display:inline-block;margin-right:20px;vertical-align:bottom;}
+    .date-line{border-bottom:2px solid #222;width:140px;display:inline-block;vertical-align:bottom;}
+    @media print{body{padding:20px;}}</style></head><body>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;padding-bottom:16px;border-bottom:3px solid #C2562F;">
+      <div>
+        <h1>S&S Contracting Company LLC</h1>
+        <h2>Third Party Authorization Form</h2>
+        <div style="font-size:11px;color:#888;">12200 Del Norte Way, Yukon, OK 73099 · (405) 201-4139 · sandscontractingco.com</div>
+      </div>
+      <div style="text-align:right;font-size:12px;color:#888;">Date: ${today}</div>
+    </div>
+
+    <div class="section">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px 24px;">
+        <div><div class="label">Property Owner / Insured</div><div class="value">${contact.first_name} ${contact.last_name}</div></div>
+        <div><div class="label">Phone</div><div class="value">${contact.phone||""}</div></div>
+        <div><div class="label">Property Address</div><div class="value">${contact.address||""}</div></div>
+        <div><div class="label">City / State / ZIP</div><div class="value">${[contact.city,contact.state,contact.zip].filter(Boolean).join(", ")}</div></div>
+        <div><div class="label">Insurance Company</div><div class="value">${insurer}</div></div>
+        <div><div class="label">Claim Number</div><div class="value">${claimNo}</div></div>
+        <div><div class="label">Policy Number</div><div class="value">${policyNo}</div></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <p class="body-text">I, <strong>${contact.first_name} ${contact.last_name}</strong>, hereby authorize S&S Contracting Company LLC to act as my representative and third-party contractor in all matters related to my insurance claim for property damage at the address listed above.</p>
+      <p class="body-text">This authorization permits S&S Contracting Company LLC to: communicate directly with my insurance company and its representatives; obtain all necessary documentation, inspection reports, and claim information; negotiate on my behalf regarding the scope of repairs and settlement amounts; and receive payment directly from the insurance company for approved work.</p>
+      <p class="body-text">This authorization remains in effect until the claim is fully settled and all approved repairs are completed, or until revoked in writing by the undersigned.</p>
+    </div>
+
+    <div class="section" style="margin-top:40px;">
+      <div style="display:flex;align-items:flex-end;gap:40px;">
+        <div>
+          ${signature?`<img src="${signature}" style="height:60px;display:block;margin-bottom:4px;"/>`:`<div class="sig-line"></div>`}
+          <div style="font-size:11px;color:#888;margin-top:4px;">Property Owner Signature</div>
+          <div style="font-size:12px;font-weight:600;">${contact.first_name} ${contact.last_name}</div>
+        </div>
+        <div>
+          <div class="date-line"></div>
+          <div style="font-size:11px;color:#888;margin-top:4px;">Date</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:40px;padding-top:16px;border-top:1px solid #ddd;font-size:11px;color:#888;">
+      S&S Contracting Company LLC · License # _______ · 12200 Del Norte Way, Yukon, OK 73099 · (405) 201-4139
+    </div>
+    </body></html>`;
+
+    const blob = new Blob([html],{type:"text/html"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href=url;
+    a.download=`ThirdPartyAuth-${contact.first_name}-${contact.last_name}.html`;
+    document.body.appendChild(a);a.click();document.body.removeChild(a);
+    setTimeout(()=>URL.revokeObjectURL(url),5000);
+  };
+
+  return(
+    <div style={{position:"fixed",inset:0,background:"rgba(46,42,33,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:200,padding:16}} onClick={onClose}>
+      <div style={{background:"#fff",borderRadius:12,width:560,maxHeight:"95vh",overflowY:"auto",boxShadow:"0 16px 50px rgba(0,0,0,0.3)"}} onClick={e=>e.stopPropagation()}>
+        <div style={{background:C.dark,padding:"14px 20px",borderRadius:"12px 12px 0 0",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <div style={{fontSize:15,fontWeight:700,color:"#fff"}}>📋 Third Party Authorization</div>
+          <button onClick={onClose} style={{background:"none",border:"none",cursor:"pointer",fontSize:20,color:"#fff"}}>✕</button>
+        </div>
+
+        <div style={{padding:"20px",display:"flex",flexDirection:"column",gap:12}}>
+          {/* Auto-filled customer info */}
+          <div style={{background:C.tan,borderRadius:8,padding:"12px 14px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px 16px"}}>
+            {[["Owner",`${contact.first_name} ${contact.last_name}`],["Phone",contact.phone||"—"],["Address",contact.address||"—"],["City/State",`${contact.city||""} ${contact.state||""} ${contact.zip||""}`]].map(([l,v])=>(
+              <div key={l}><div style={{fontSize:9.5,fontWeight:700,color:C.muted,textTransform:"uppercase",marginBottom:2}}>{l}</div><div style={{fontSize:12.5,fontWeight:600,color:C.dark}}>{v}</div></div>
+            ))}
+          </div>
+
+          <Lbl label="Insurance Company">
+            <Inp value={insurer} onChange={e=>setInsurer(e.target.value)} placeholder="e.g. State Farm, Allstate"/>
+          </Lbl>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+            <Lbl label="Claim Number"><Inp value={claimNo} onChange={e=>setClaimNo(e.target.value)} placeholder="Claim #"/></Lbl>
+            <Lbl label="Policy Number"><Inp value={policyNo} onChange={e=>setPolicyNo(e.target.value)} placeholder="Policy #"/></Lbl>
+          </div>
+
+          {/* Signature */}
+          <div style={{border:`1px solid ${C.border}`,borderRadius:8,overflow:"hidden"}}>
+            <div style={{padding:"10px 14px",background:C.tan,fontSize:11,fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:0.5}}>Customer Signature</div>
+            {signature?(
+              <div style={{padding:"12px 14px"}}>
+                <img src={signature} alt="Sig" style={{maxHeight:60,display:"block",marginBottom:4}}/>
+                <div style={{fontSize:11,color:C.sage,fontWeight:700}}>✅ Signed</div>
+                <button onClick={()=>setSignature(null)} style={{fontSize:11,color:C.rust,background:"none",border:"none",cursor:"pointer",marginTop:4}}>Clear</button>
+              </div>
+            ):(
+              <div style={{padding:"12px 14px"}}>
+                <button onClick={()=>setShowSigPad(true)} style={{width:"100%",padding:"11px",background:C.sage,color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:700,cursor:"pointer"}}>✍️ Sign on Tablet</button>
+              </div>
+            )}
+          </div>
+
+          <div style={{display:"flex",gap:10}}>
+            <Btn primary onClick={print} style={{flex:1,justifyContent:"center",padding:"11px",fontSize:13}}>📥 Download Form</Btn>
+            <Btn onClick={onClose} style={{justifyContent:"center",padding:"11px"}}>Close</Btn>
+          </div>
+        </div>
+      </div>
+      {showSigPad&&<SignaturePad onSave={sig=>{setSignature(sig);setShowSigPad(false);}} onClose={()=>setShowSigPad(false)}/>}
+    </div>
+  );
+}
+
+
 // ── Login ────────────────────────────────────────────────────────
 function Login({onLogin}){
   const [email,setEmail]=React.useState("sastotts@hotmail.com");
@@ -4045,7 +4326,7 @@ function App(){
               </div>
 
               <div style={{display:"flex",gap:2,padding:"0 22px",borderBottom:`1px solid ${C.border}`}}>
-                {["Notes","Activities","Proposals","Jobsite Photos","Documents","Email History"].map(t=>(
+                {["Notes","Activities","Proposals","Properties","Jobsite Photos","Forms","Email History"].map(t=>(
                   <button key={t} onClick={()=>setActiveTab(t)} style={{padding:"9px 12px",border:"none",background:"transparent",fontSize:12,fontWeight:600,color:activeTab===t?C.rust:C.muted,cursor:"pointer",borderBottom:activeTab===t?`2px solid ${C.rust}`:"2px solid transparent"}}>{t}</button>
                 ))}
               </div>
@@ -4139,7 +4420,8 @@ function App(){
                 )}
                 {activeTab==="Proposals"&&<ProposalsTab contactId={selected.id} contact={selected} dbUser={dbUser} onNew={()=>setShowGutterProposal(true)} onNewRoof={()=>setShowRoofProposal(true)} onNewMisc={()=>setShowMiscProposal(true)}/>}
                 {activeTab==="Jobsite Photos"&&<JobsitePhotosTab contactId={selected.id} contact={selected}/>}
-                {activeTab==="Documents"&&<div style={{textAlign:"center",padding:"30px 20px",color:C.muted}}>📁<br/><br/>No documents yet.<br/>Upload contracts, photos &amp; reports — Phase 2.</div>}
+                {activeTab==="Properties"&&<PropertyLocationsTab contact={selected} contactId={selected.id}/>}
+                {activeTab==="Forms"&&<DocumentsFormsTab contact={selected} dbUser={dbUser}/>}
                 {activeTab==="Email History"&&<EmailHistoryTab contactId={selected.id}/>}
               </div>
             </div>
