@@ -4028,6 +4028,184 @@ function ThirdPartyAuthForm({contact, dbUser, onClose}){
 }
 
 
+// ── Contact Timeline ───────────────────────────────────────────────
+function ContactTimeline({contact, contactId, dbUser, onNewActivity, onNewEmail}){
+  const [items, setItems] = React.useState(null);
+  const [expandedId, setExpandedId] = React.useState(null);
+
+  const load = async() => {
+    const [
+      {data: acts},
+      {data: emails},
+      {data: notes},
+      {data: proposals},
+    ] = await Promise.all([
+      sb.from("activities").select("*").eq("contact_id", contactId).order("created_at",{ascending:false}),
+      sb.from("emails").select("*").eq("contact_id", contactId).order("sent_at",{ascending:false}),
+      sb.from("notes").select("*").eq("contact_id", contactId).order("created_at",{ascending:false}),
+      sb.from("proposals").select("*").eq("contact_id", contactId).order("created_at",{ascending:false}),
+    ]);
+
+    const timeline = [
+      ...(acts||[]).map(a=>({
+        id:"act-"+a.id, type:"activity", date: new Date(a.due_date||a.created_at), data:a,
+      })),
+      ...(emails||[]).map(e=>({
+        id:"email-"+e.id, type:"email", date: new Date(e.sent_at), data:e,
+      })),
+      ...(notes||[]).map(n=>({
+        id:"note-"+n.id, type:"note", date: new Date(n.created_at), data:n,
+      })),
+      ...(proposals||[]).map(p=>({
+        id:"prop-"+p.id, type:"proposal", date: new Date(p.created_at), data:p,
+      })),
+    ].sort((a,b)=>b.date-a.date);
+
+    setItems(timeline);
+  };
+
+  React.useEffect(()=>{ load(); },[contactId]);
+
+  const fmt = d => {
+    const now = new Date();
+    const diff = now - d;
+    if(diff < 86400000) return d.toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"});
+    if(diff < 604800000) return d.toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"});
+    return d.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"});
+  };
+
+  const icons = {activity:"📅",email:"📧",note:"📝",proposal:"📄"};
+  const colors = {activity:C.indigo,email:C.rust,note:C.gold,proposal:C.sage};
+
+  return(
+    <div>
+      {/* Quick action buttons */}
+      <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap"}}>
+        <Btn onClick={onNewActivity} style={{padding:"6px 12px",fontSize:12,gap:4}}>📅 Log Activity</Btn>
+        <Btn onClick={onNewEmail} style={{padding:"6px 12px",fontSize:12,gap:4}}>📧 Send Email</Btn>
+        <Btn onClick={()=>{
+          const note = prompt("Quick note:");
+          if(!note) return;
+          sb.from("notes").insert({contact_id:contactId,created_by:(dbUser&&dbUser.id),content:note})
+            .then(()=>load());
+        }} style={{padding:"6px 12px",fontSize:12,gap:4}}>📝 Add Note</Btn>
+      </div>
+
+      {items===null?<Spinner/>:items.length===0?(
+        <div style={{textAlign:"center",padding:"30px 20px",color:C.muted}}>
+          <div style={{fontSize:32,marginBottom:8}}>📋</div>
+          <div style={{fontSize:13,fontWeight:700,color:C.sub}}>No activity yet</div>
+          <div style={{fontSize:11.5,marginTop:4}}>Log a call, send an email, or add a note to get started</div>
+        </div>
+      ):(
+        <div style={{position:"relative"}}>
+          {/* Timeline line */}
+          <div style={{position:"absolute",left:19,top:0,bottom:0,width:2,background:C.border,zIndex:0}}/>
+
+          {items.map((item,idx)=>{
+            const isOpen = expandedId===item.id;
+            const color = colors[item.type];
+            const icon = icons[item.type];
+            const d = item.data;
+
+            return(
+              <div key={item.id} style={{display:"flex",gap:12,marginBottom:12,position:"relative",zIndex:1}}>
+                {/* Icon dot */}
+                <div style={{width:38,height:38,borderRadius:"50%",background:color+"22",border:`2px solid ${color}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0,background:"#fff",zIndex:2}}>
+                  {icon}
+                </div>
+
+                {/* Content card */}
+                <div style={{flex:1,background:"#fff",border:`1px solid ${isOpen?color:C.border}`,borderRadius:8,overflow:"hidden",cursor:"pointer"}}
+                  onClick={()=>setExpandedId(isOpen?null:item.id)}>
+
+                  {/* Card header */}
+                  <div style={{padding:"10px 12px",display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+                    <div style={{flex:1,minWidth:0}}>
+                      {item.type==="activity"&&(
+                        <div>
+                          <div style={{display:"flex",alignItems:"center",gap:6}}>
+                            <span style={{fontSize:11,fontWeight:700,padding:"2px 7px",borderRadius:10,background:color+"22",color:color}}>{d.type||"Activity"}</span>
+                            {d.is_completed&&<span style={{fontSize:10,color:C.sage,fontWeight:700}}>✅ Done</span>}
+                          </div>
+                          <div style={{fontSize:13,fontWeight:700,color:C.dark,marginTop:4}}>{d.subject}</div>
+                          {d.completion_note&&<div style={{fontSize:12,color:C.sub,marginTop:2,fontStyle:"italic"}}>"{d.completion_note}"</div>}
+                        </div>
+                      )}
+                      {item.type==="email"&&(
+                        <div>
+                          <div style={{fontSize:11,fontWeight:700,color:color,marginBottom:2}}>EMAIL SENT</div>
+                          <div style={{fontSize:13,fontWeight:700,color:C.dark}}>{d.subject}</div>
+                          {!isOpen&&<div style={{fontSize:11.5,color:C.sub,marginTop:2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{(d.body||"").slice(0,60)}...</div>}
+                        </div>
+                      )}
+                      {item.type==="note"&&(
+                        <div>
+                          <div style={{fontSize:11,fontWeight:700,color:color,marginBottom:2}}>NOTE</div>
+                          <div style={{fontSize:13,color:C.dark,lineHeight:1.5}}>{isOpen?d.content:(d.content||"").slice(0,80)+(d.content&&d.content.length>80?"...":"")}</div>
+                        </div>
+                      )}
+                      {item.type==="proposal"&&(
+                        <div>
+                          <div style={{fontSize:11,fontWeight:700,color:color,marginBottom:2}}>
+                            {d.proposal_data&&d.proposal_data.type==="roof"?"ROOF PROPOSAL":d.proposal_data&&d.proposal_data.type==="misc"?"PROJECT PROPOSAL":"GUTTER PROPOSAL"}
+                          </div>
+                          <div style={{display:"flex",alignItems:"center",gap:8}}>
+                            <div style={{fontSize:13,fontWeight:700,color:C.dark}}>${parseFloat(d.total_amount||0).toLocaleString(undefined,{minimumFractionDigits:2})}</div>
+                            <span style={{fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:10,background:d.status==="Signed"?C.sage+"22":"#FFF9EC",color:d.status==="Signed"?C.sage:C.gold}}>{d.status}</span>
+                            {d.view_count>0&&<span style={{fontSize:10.5,color:C.indigo}}>👁 {d.view_count}x</span>}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    <div style={{textAlign:"right",flexShrink:0,marginLeft:8}}>
+                      <div style={{fontSize:10.5,color:C.muted}}>{fmt(item.date)}</div>
+                      <div style={{fontSize:11,color:color,marginTop:2}}>{isOpen?"▲":"▼"}</div>
+                    </div>
+                  </div>
+
+                  {/* Expanded content */}
+                  {isOpen&&(
+                    <div style={{borderTop:`1px solid ${C.border}`,padding:"10px 12px",background:"#FAFAF8"}}>
+                      {item.type==="email"&&(
+                        <div>
+                          <div style={{fontSize:11.5,color:C.muted,marginBottom:6}}>To: {d.to_email||contact.email||"customer"}</div>
+                          <div style={{fontSize:13,lineHeight:1.7,color:C.text,whiteSpace:"pre-wrap",background:"#fff",padding:"10px 12px",borderRadius:6,border:`1px solid ${C.border}`}}>
+                            {d.body||"(no message)"}
+                          </div>
+                        </div>
+                      )}
+                      {item.type==="activity"&&(
+                        <div style={{fontSize:12.5,color:C.sub,lineHeight:1.5}}>
+                          {d.notes&&<div style={{marginBottom:6}}>{d.notes}</div>}
+                          {d.due_date&&<div style={{fontSize:11.5,color:C.muted}}>Due: {new Date(d.due_date).toLocaleString("en-US",{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"})}</div>}
+                          {d.assigned_user_id&&<div style={{fontSize:11.5,color:C.muted,marginTop:2}}>Assigned to: {d.assigned_user_id}</div>}
+                        </div>
+                      )}
+                      {item.type==="proposal"&&d.public_token&&(
+                        <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+                          <input readOnly value={`${window.location.origin}?token=${d.public_token}`}
+                            style={{flex:1,padding:"6px 10px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:11.5,background:"#fff",outline:"none",minWidth:0}}
+                            onClick={e=>e.target.select()}/>
+                          <button onClick={()=>{navigator.clipboard.writeText(`${window.location.origin}?token=${d.public_token}`);alert("Link copied!");}}
+                            style={{padding:"6px 12px",background:C.sage,color:"#fff",border:"none",borderRadius:6,fontSize:12,fontWeight:700,cursor:"pointer",flexShrink:0}}>
+                            📋 Copy Link
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+
 // ── Login ────────────────────────────────────────────────────────
 function Login({onLogin}){
   const [email,setEmail]=React.useState("sastotts@hotmail.com");
@@ -4078,7 +4256,7 @@ function App(){
   const [notes,setNotes]=React.useState([]);
   const [search,setSearch]=React.useState("");
   const [view,setView]=React.useState("contacts");
-  const [activeTab,setActiveTab]=React.useState("Notes");
+  const [activeTab,setActiveTab]=React.useState("Timeline");
   const [newNote,setNewNote]=React.useState("");
   const [savingNote,setSavingNote]=React.useState(false);
   const [showNewContact,setShowNewContact]=React.useState(false);
@@ -4390,12 +4568,19 @@ function App(){
               </div>
 
               <div style={{display:"flex",gap:2,padding:"0 22px",borderBottom:`1px solid ${C.border}`}}>
-                {["Notes","Activities","Proposals","Properties","Jobsite Photos","Forms","Email History"].map(t=>(
+                {["Timeline","Notes","Activities","Proposals","Properties","Jobsite Photos","Forms","Email History"].map(t=>(
                   <button key={t} onClick={()=>setActiveTab(t)} style={{padding:"9px 12px",border:"none",background:"transparent",fontSize:12,fontWeight:600,color:activeTab===t?C.rust:C.muted,cursor:"pointer",borderBottom:activeTab===t?`2px solid ${C.rust}`:"2px solid transparent"}}>{t}</button>
                 ))}
               </div>
 
               <div style={{padding:"16px 22px",flex:1}}>
+                {activeTab==="Timeline"&&<ContactTimeline
+                  contact={selected}
+                  contactId={selected.id}
+                  dbUser={dbUser}
+                  onNewActivity={()=>setShowNewActivity(true)}
+                  onNewEmail={()=>setShowEmail(true)}/>}
+
                 {activeTab==="Notes"&&(
                   <div>
                     <div style={{background:"#fff",border:`1px solid ${C.border}`,borderRadius:8,padding:"12px 14px",marginBottom:14}}>
