@@ -2173,22 +2173,14 @@ ${e.body}`
 
 // ── Email Modal ───────────────────────────────────────────────────
 async function sendEmailViaResend({to, toName, subject, html, text}){
-  emailjs.init(EMAILJS_PUBLIC_KEY);
-  const result = await emailjs.send(
-    EMAILJS_SERVICE_ID,
-    EMAILJS_TEMPLATE_ID,
-    {
-      to_name: toName,
-      to_email: to,
-      subject: subject,
-      message: text,
-      from_name: "S&S Contracting Company LLC",
-      reply_to: "stacy@sandscontractingco.com",
-      bcc_email: "stacy@sandscontractingco.com",
-    }
-  );
-  if(result.status !== 200) throw new Error("Failed to send email");
-  return result;
+  const response = await fetch("/.netlify/functions/send-email", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({to, toName, subject, text: text||html}),
+  });
+  const data = await response.json();
+  if(!response.ok) throw new Error(data.error||"Failed to send email");
+  return data;
 }
 
 function EmailModal({contact, dbUser, onClose}){
