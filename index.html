@@ -3431,26 +3431,13 @@ function PublicProposalViewer(){
     if(!token){setError("Invalid proposal link.");setLoading(false);return;}
     const load = async() => {
       try {
-        // Load proposal by token
-        const {data:p, error:pe} = await sb
-          .from("proposals")
-          .select("*")
-          .eq("public_token", token)
-          .single();
-        if(pe||!p){setError("Proposal not found.");setLoading(false);return;}
-        
-        // Load contact
-        const {data:c} = await sb.from("contacts").select("*").eq("id", p.contact_id).single();
-        
+        // Load proposal + contact by token (secure lookup; also records the view)
+        const {data:res, error:pe} = await sb.rpc("get_public_proposal", {p_token: token});
+        if(pe||!res||!res.proposal){setError("Proposal not found.");setLoading(false);return;}
+        const p = res.proposal;
         setProposal(p);
-        setContact(c);
+        setContact(res.contact);
         if(p.status==="Signed") setAccepted(true);
-
-        // Track view
-        await sb.from("proposals").update({
-          view_count: (p.view_count||0) + 1,
-          last_viewed_at: new Date().toISOString(),
-        }).eq("id", p.id);
 
       } catch(e){ setError("Could not load proposal."); }
       finally { setLoading(false); }
@@ -3461,11 +3448,8 @@ function PublicProposalViewer(){
   const handleSign = async(sig) => {
     setSignature(sig);
     setShowSigPad(false);
-    await sb.from("proposals").update({
-      status: "Signed",
-      signed_at: new Date().toISOString(),
-      proposal_data: {...(proposal.proposal_data||{}), signature: sig},
-    }).eq("id", proposal.id);
+    const {data:signRes, error:signErr} = await sb.rpc("sign_public_proposal", {p_token: token, p_signature: sig});
+    if(signErr || !signRes || !signRes.ok){ alert("Sorry, we couldn't save your signature. Please try again or call (405) 201-4139."); return; }
     setAccepted(true);
 
     // Send notification email to S&S Contracting
