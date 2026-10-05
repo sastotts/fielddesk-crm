@@ -1471,14 +1471,29 @@ function GutterProposalModal({contact, dbUser, onSave, onClose}){
       setSavedProposalToken(data.public_token);
       setSaved(true);
       if(onSave) onSave(data);
+      return data;
     } catch(e){ console.error(e); }
     finally{ setSaving(false); }
   };
 
-  const sendEmail = () => {
-    // In Phase 2 this will send a real email link
-    setEmailSent(true);
-    setTimeout(()=>setEmailSent(false), 3000);
+  const sendEmail = async() => {
+    if(!contact.email){ alert("This contact has no email address. Add one first."); return; }
+    const data = savedProposalToken ? {public_token: savedProposalToken} : await saveProposal();
+    if(!data || !data.public_token) return;
+    const link = `${window.location.origin}?token=${data.public_token}`;
+    try {
+      await sendEmailViaResend({
+        to: contact.email,
+        toName: `${contact.first_name} ${contact.last_name}`,
+        subject: `Proposal from S&S Contracting`,
+        text: `Hi ${contact.first_name},\n\nThank you for the opportunity to provide you with a proposal!\n\nClick the link below to view your proposal, review the details, and sign to accept:\n\n${link}\n\nIf you have any questions please don't hesitate to reach out.\n\nBest regards,\n${(dbUser&&dbUser.full_name)||"S&S Contracting"}\nS&S Contracting Company LLC\n(405) 201-4139`,
+        contactId: contact.id,
+      });
+      setEmailSent(true);
+      alert("Proposal emailed to " + contact.email + "!");
+    } catch(e) {
+      alert("Proposal saved, but the email didn't send: " + e.message);
+    }
   };
 
   const MeasField = ({label, field, important}) => (
@@ -1750,13 +1765,15 @@ function GutterProposalModal({contact, dbUser, onSave, onClose}){
               </button>
               <button onClick={async()=>{
                 const link = `${window.location.origin}?token=${savedProposalToken}`;
-                await sendEmailViaResend({
+                try { await sendEmailViaResend({
+                  contactId: contact.id,
                   to: contact.email,
                   toName: `${contact.first_name} ${contact.last_name}`,
                   subject: `Proposal from S&S Contracting`,
                   text: `Hi ${contact.first_name},\n\nThank you for the opportunity to provide you with a proposal!\n\nClick the link below to view your proposal, review the details, and sign to accept:\n\n${link}\n\nIf you have any questions please don't hesitate to reach out.\n\nBest regards,\n${(dbUser&&dbUser.full_name)||"S&S Contracting"}\nS&S Contracting Company LLC\n(405) 201-4139`,
                 });
                 alert("Proposal link emailed to " + contact.email + "!");
+                } catch(e) { alert("Email didn't send: " + e.message); }
               }} style={{padding:"8px 14px",background:"#C2562F",color:"#fff",border:"none",borderRadius:6,fontSize:12,fontWeight:700,cursor:"pointer"}}>
                 📧 Email Link
               </button>
@@ -2171,15 +2188,200 @@ ${e.body}`
 }
 
 
+// ── Email Tab (per-user mailbox) ──────────────────────────────────
+async function callMailFn(name, method, body){
+  const sess = await sb.auth.getSession();
+  const session = sess && sess.data && sess.data.session;
+  if(!session) throw new Error("You're logged out - please log in again.");
+  const r = await fetch("/.netlify/functions/"+name, {
+    method: method,
+    headers: {"Content-Type":"application/json","Authorization":"Bearer "+session.access_token},
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  let data = {};
+  try { data = await r.json(); } catch(e) { data = {error:"Unexpected server response ("+r.status+")"}; }
+  if(!r.ok) throw new Error(data.error||"Request failed");
+  return data;
+}
+
+function EmailView({dbUser, authUser, contacts}){
+  const [loading, setLoading] = React.useState(true);
+  const [account, setAccount] = React.useState(null);
+  const [password, setPassword] = React.useState("");
+  const [busy, setBusy] = React.useState(false);
+  const [err, setErr] = React.useState("");
+  const [composing, setComposing] = React.useState(false);
+  const myEmail = (authUser&&authUser.email)||(dbUser&&dbUser.email)||"";
+
+  const load = async() => {
+    setLoading(true);
+    const uid = (authUser&&authUser.id)||(dbUser&&dbUser.id);
+    const {data} = await sb.from("user_mail_accounts").select("email,verified_at").eq("user_id", uid).maybeSingle();
+    setAccount(data||null);
+    setLoading(false);
+  };
+  React.useEffect(()=>{ load(); },[]);
+
+  const connect = async() => {
+    if(!password){ setErr("Enter your email password."); return; }
+    setBusy(true); setErr("");
+    try {
+      await callMailFn("connect-mailbox","POST",{password});
+      setPassword("");
+      await load();
+    } catch(e){ setErr(e.message); }
+    finally{ setBusy(false); }
+  };
+
+  const disconnect = async() => {
+    if(!window.confirm("Disconnect your mailbox from FieldDesk? You can reconnect any time.")) return;
+    setBusy(true);
+    try { await callMailFn("connect-mailbox","DELETE"); await load(); }
+    catch(e){ alert(e.message); }
+    finally{ setBusy(false); }
+  };
+
+  if(loading) return <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",color:C.sub}}>Loading…</div>;
+
+  if(!account) return(
+    <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+      <div style={{background:"#fff",border:`1px solid ${C.border}`,borderRadius:12,width:420,maxWidth:"100%",padding:24,boxShadow:"0 6px 24px rgba(0,0,0,0.08)"}}>
+        <div style={{fontSize:34,textAlign:"center",marginBottom:6}}>✉️</div>
+        <div style={{fontSize:17,fontWeight:700,color:C.dark,textAlign:"center",marginBottom:4}}>Connect your mailbox</div>
+        <div style={{fontSize:12.5,color:C.sub,textAlign:"center",marginBottom:18,lineHeight:1.5}}>
+          Enter the password for <strong>{myEmail}</strong> (the same one you use for IONOS webmail). It's stored encrypted and only used to send and receive your email.
+        </div>
+        <input type="password" value={password} onChange={e=>setPassword(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")connect();}}
+          placeholder="Email password" autoComplete="current-password"
+          style={{width:"100%",boxSizing:"border-box",padding:"10px 12px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:14,outline:"none",marginBottom:10}}/>
+        {err&&<div style={{fontSize:12,color:C.rust,marginBottom:10}}>{err}</div>}
+        <Btn primary onClick={connect} disabled={busy} style={{width:"100%",justifyContent:"center",padding:"11px"}}>{busy?"Checking with IONOS…":"Connect Mailbox"}</Btn>
+      </div>
+    </div>
+  );
+
+  return(
+    <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
+      <div style={{padding:"12px 18px",background:"#fff",borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+        <div style={{fontSize:16,fontWeight:700,color:C.dark}}>✉️ Email</div>
+        <div style={{fontSize:12,color:C.sage,fontWeight:600}}>● Connected as {account.email}</div>
+        <div style={{flex:1}}/>
+        <Btn primary onClick={()=>setComposing(true)} style={{padding:"7px 14px",fontSize:12}}>✏️ New Email</Btn>
+        <button onClick={disconnect} disabled={busy} style={{background:"none",border:"none",color:C.muted,fontSize:12,cursor:"pointer"}}>Disconnect</button>
+      </div>
+      <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:10,padding:16,textAlign:"center"}}>
+        <div style={{fontSize:38}}>📥</div>
+        <div style={{fontSize:16,fontWeight:700,color:C.dark}}>Your inbox is coming next</div>
+        <div style={{fontSize:12.5,color:C.sub,maxWidth:360,lineHeight:1.5}}>Your mailbox is connected. Emails you send from FieldDesk now come from {account.email} and are saved in your IONOS Sent folder.</div>
+      </div>
+      {composing&&<ComposeEmail contacts={contacts||[]} onClose={()=>setComposing(false)}/>}
+    </div>
+  );
+}
+
+function ComposeEmail({contacts, onClose, initial}){
+  const init = initial||{};
+  const [to, setTo] = React.useState(init.to||"");
+  const [cc, setCc] = React.useState(init.cc||"");
+  const [subject, setSubject] = React.useState(init.subject||"");
+  const [body, setBody] = React.useState(init.body||"");
+  const [files, setFiles] = React.useState([]);
+  const [sending, setSending] = React.useState(false);
+  const [err, setErr] = React.useState("");
+
+  const addFiles = (list) => {
+    Array.prototype.forEach.call(list, f => {
+      const used = files.reduce((t,x)=>t+(x.size||0),0);
+      if(used + f.size > 4*1024*1024){ alert(f.name+" is too large - attachments are limited to 4 MB total per email."); return; }
+      const rd = new FileReader();
+      rd.onload = () => {
+        const b64 = String(rd.result).split(",")[1];
+        setFiles(p => p.concat([{filename:f.name, contentType:f.type||"application/octet-stream", content:b64, size:f.size}]));
+      };
+      rd.readAsDataURL(f);
+    });
+  };
+
+  const send = async() => {
+    if(!to){ setErr("Add a recipient."); return; }
+    if(!subject){ setErr("Add a subject."); return; }
+    setSending(true); setErr("");
+    try {
+      const first = to.split(",")[0].trim().toLowerCase();
+      const match = contacts.find(c => c.email && c.email.trim().toLowerCase() === first);
+      await sendEmailViaResend({
+        to: to, cc: cc||undefined, subject: subject, text: body,
+        inReplyTo: init.inReplyTo, references: init.references,
+        attachments: files.map(f => ({filename:f.filename, contentType:f.contentType, content:f.content})),
+        contactId: match ? match.id : undefined,
+      });
+      alert("Email sent!" + (match ? " Saved to "+match.first_name+" "+match.last_name+"'s history." : ""));
+      onClose();
+    } catch(e){ setErr(e.message); }
+    finally{ setSending(false); }
+  };
+
+  const field = {width:"100%",boxSizing:"border-box",padding:"8px 10px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:13,outline:"none"};
+  return(
+    <div style={{position:"fixed",inset:0,background:"rgba(46,42,33,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:200,padding:16}} onClick={onClose}>
+      <div style={{background:"#fff",borderRadius:12,width:600,maxWidth:"100%",maxHeight:"95vh",overflowY:"auto",boxShadow:"0 16px 50px rgba(0,0,0,0.3)"}} onClick={e=>e.stopPropagation()}>
+        <div style={{background:C.dark,padding:"12px 18px",borderRadius:"12px 12px 0 0",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <div style={{fontSize:14,fontWeight:700,color:"#fff"}}>✏️ New Email</div>
+          <button onClick={onClose} style={{background:"none",border:"none",cursor:"pointer",fontSize:18,color:"#fff"}}>✕</button>
+        </div>
+        <div style={{padding:18,display:"flex",flexDirection:"column",gap:10}}>
+          <input list="fd-contact-emails" value={to} onChange={e=>setTo(e.target.value)} placeholder="To" style={field}/>
+          <datalist id="fd-contact-emails">
+            {contacts.filter(c=>c.email).map(c=><option key={c.id} value={c.email}>{c.first_name} {c.last_name}</option>)}
+          </datalist>
+          <input value={cc} onChange={e=>setCc(e.target.value)} placeholder="Cc (optional)" style={field}/>
+          <input value={subject} onChange={e=>setSubject(e.target.value)} placeholder="Subject" style={field}/>
+          <textarea value={body} onChange={e=>setBody(e.target.value)} placeholder="Write your message…" rows={10} style={Object.assign({},field,{resize:"vertical",fontFamily:"inherit",lineHeight:1.5})}/>
+          <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+            <label style={{fontSize:12,fontWeight:600,color:C.sub,cursor:"pointer",border:`1px dashed ${C.border}`,borderRadius:6,padding:"6px 10px"}}>
+              📎 Attach files
+              <input type="file" multiple style={{display:"none"}} onChange={e=>{addFiles(e.target.files);e.target.value="";}}/>
+            </label>
+            {files.map((f,i)=>(
+              <span key={i} style={{fontSize:11.5,background:C.tan,borderRadius:12,padding:"4px 10px"}}>
+                {f.filename} <button onClick={()=>setFiles(p=>p.filter((_,j)=>j!==i))} style={{border:"none",background:"none",cursor:"pointer",color:C.rust}}>✕</button>
+              </span>
+            ))}
+          </div>
+          {err&&<div style={{fontSize:12,color:C.rust}}>{err}</div>}
+          <div style={{display:"flex",gap:10}}>
+            <Btn onClick={onClose} style={{flex:1,justifyContent:"center"}}>Cancel</Btn>
+            <Btn primary onClick={send} disabled={sending} style={{flex:2,justifyContent:"center"}}>{sending?"Sending…":"📤 Send"}</Btn>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Email Modal ───────────────────────────────────────────────────
-async function sendEmailViaResend({to, toName, subject, html, text}){
+async function sendEmailViaResend({to, toName, cc, subject, html, text, attachments, inReplyTo, references, contactId}){
+  const sess = await sb.auth.getSession();
+  const session = sess && sess.data && sess.data.session;
+  if(!session) throw new Error("You're logged out - please log in again.");
   const response = await fetch("/.netlify/functions/send-email", {
     method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({to, toName, subject, text: text||html}),
+    headers: {"Content-Type": "application/json", "Authorization": "Bearer " + session.access_token},
+    body: JSON.stringify({to, toName, cc, subject, text, html, attachments, inReplyTo, references}),
   });
-  const data = await response.json();
+  let data = {};
+  try { data = await response.json(); } catch(e) { data = {error: "Email server returned an unexpected response ("+response.status+")"}; }
   if(!response.ok) throw new Error(data.error||"Failed to send email");
+  if(contactId){
+    try {
+      await sb.from("emails").insert({
+        contact_id: contactId, sent_by: session.user.id, user_id: session.user.id,
+        direction: "out", subject: subject, body: text||"", html: html||null,
+        to_email: to, from_email: data.from||null, message_id: data.messageId||null,
+        sent_at: new Date().toISOString(),
+      });
+    } catch(e) { console.error("Email log failed", e); }
+  }
   return data;
 }
 
@@ -2643,9 +2845,10 @@ function RoofProposalModal({contact, dbUser, onSave, onClose}){
                 style={{padding:"8px 14px",background:"#3D6E5C",color:"#fff",border:"none",borderRadius:6,fontSize:12,fontWeight:700,cursor:"pointer"}}>📋 Copy</button>
               <button onClick={async()=>{
                 const link=`${window.location.origin}?token=${savedToken}`;
-                await sendEmailViaResend({to:contact.email,toName:`${contact.first_name} ${contact.last_name}`,subject:`Proposal from S&S Contracting`,
+                try { await sendEmailViaResend({contactId:contact.id,to:contact.email,toName:`${contact.first_name} ${contact.last_name}`,subject:`Proposal from S&S Contracting`,
                   text:`Hi ${contact.first_name},\n\nPlease click the link below to view and sign your proposal:\n\n${link}\n\nBest regards,\n${(dbUser&&dbUser.full_name)||"S&S Contracting"}\n(405) 201-4139`});
                 alert("Emailed to "+contact.email+"!");
+                } catch(e) { alert("Email didn't send: " + e.message); }
               }} style={{padding:"8px 14px",background:"#C2562F",color:"#fff",border:"none",borderRadius:6,fontSize:12,fontWeight:700,cursor:"pointer"}}>📧 Email</button>
             </div>
           </div>
@@ -3564,7 +3767,8 @@ sandscontractingco.com`
         toName: `${contact.first_name} ${contact.last_name}`,
         subject,
         text: body,
-        html:"<div style=\"font-family:Arial,sans-serif;font-size:14px;line-height:1.6;color:#333;max-width:600px;margin:0 auto;\">" +
+        contactId: contact.id,
+        htmlTemplate:"<div style=\"font-family:Arial,sans-serif;font-size:14px;line-height:1.6;color:#333;max-width:600px;margin:0 auto;\">" +
             "<div style=\"background:#2E2A21;padding:16px 20px;border-bottom:3px solid #C2562F;\">" +
             "<div style=\"font-size:18px;font-weight:800;color:#fff;\">S&S Contracting Company LLC</div>" +
             "<div style=\"font-size:11px;color:#A9A18E;\">Roofing - Gutters - Outdoor Living</div></div>" +
@@ -4350,7 +4554,7 @@ function App(){
     if(completeNoteText.trim()){
       await sb.from("notes").insert({
         contact_id: a.contact_id,
-        created_by: dbUser?.id||dbUser&&dbUser.id,
+        created_by: dbUser&&dbUser.id,
         content: `[${a.type||"Activity"} completed] ${completeNoteText}`,
       });
     }
@@ -4427,7 +4631,7 @@ function App(){
       <div style={{flex:1,display:"flex",overflow:"hidden"}}>
         {/* SIDEBAR */}
         <nav style={{width:158,background:C.dark,display:"flex",flexDirection:"column",padding:"12px 8px",gap:1,flexShrink:0}}>
-          {[["👥","Contacts","contacts"],["📅","Calendar","calendar"],["📈","Pipeline","pipeline"],["📞","Call Lists","calls"],["🏷️","Price Lists","prices"],["📊","Reports","reports"],["⚙️","Admin","admin"]].map(([icon,label,key])=>(
+          {[["👥","Contacts","contacts"],["✉️","Email","email"],["📅","Calendar","calendar"],["📈","Pipeline","pipeline"],["📞","Call Lists","calls"],["🏷️","Price Lists","prices"],["📊","Reports","reports"],["⚙️","Admin","admin"]].map(([icon,label,key])=>(
             <button key={key} onClick={()=>setView(key)} style={{display:"flex",alignItems:"center",gap:9,padding:"9px 10px",borderRadius:6,background:view===key?C.rust:"transparent",border:"none",color:view===key?"#fff":"#C4BCA8",fontSize:12.5,fontWeight:500,cursor:"pointer",textAlign:"left"}}>
               {icon} {label}
             </button>
@@ -4736,8 +4940,11 @@ function App(){
           onReschedule={updated=>setActivities(p=>p.map(a=>a.id===updated.id?updated:a))}
         />}
 
+        {/* EMAIL VIEW */}
+        {view==="email"&&<EmailView dbUser={dbUser} authUser={authUser} contacts={contacts||[]}/>}
+
         {/* OTHER VIEWS */}
-        {view!=="contacts"&&view!=="pipeline"&&view!=="calendar"&&(
+        {view!=="contacts"&&view!=="pipeline"&&view!=="calendar"&&view!=="email"&&(
           <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:12}}>
             <div style={{fontSize:38}}>{view==="calls"?"📞":view==="prices"?"🏷️":view==="reports"?"📊":"⚙️"}</div>
             <div style={{fontSize:18,fontWeight:700,color:C.dark,textTransform:"capitalize"}}>{view==="prices"?"Price Lists":view}</div>

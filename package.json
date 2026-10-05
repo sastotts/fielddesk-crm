@@ -2,6 +2,7 @@
   "name": "fielddesk",
   "version": "1.0.0",
   "dependencies": {
+    "imapflow": "^1.0.164",
     "nodemailer": "^6.9.0"
   }
 }
