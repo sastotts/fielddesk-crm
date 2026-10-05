@@ -1,7 +1,6 @@
-// Sends email as the logged-in user from their own IONOS mailbox.
-// Body: { to, toName, cc, subject, text, html, inReplyTo, references, attachments:[{filename, content(base64), contentType}], contactId }
+// POST {password}  -> tests the user's IONOS login (sending + receiving) and saves it encrypted.
+// DELETE           -> disconnects the user's mailbox.
 const nodemailer = require("nodemailer");
-const MailComposer = require("nodemailer/lib/mail-composer");
 const { ImapFlow } = require("imapflow");
 // ===== Shared helpers (kept in this file so it can be uploaded on its own) =====
 // Shared helpers: verify the caller is a logged-in FieldDesk user,
@@ -83,56 +82,33 @@ async function getMailbox(token, userId) {
 
 
 exports.handler = async (event) => {
-  if (event.httpMethod !== "POST") return json(405, { error: "Method not allowed" });
   const { user, token, error } = await requireUser(event);
   if (error) return error;
 
   try {
-    const p = JSON.parse(event.body || "{}");
-    if (!p.to) return json(400, { error: "No recipient email address" });
-    if (!p.subject) return json(400, { error: "Subject is required" });
+    if (event.httpMethod === "DELETE") {
+      await db(token, `user_mail_accounts?user_id=eq.${user.id}`, { method: "DELETE", prefer: "return=minimal" });
+      return json(200, { success: true });
+    }
+    if (event.httpMethod !== "POST") return json(405, { error: "Method not allowed" });
 
-    const mbox = await getMailbox(token, user.id);
-    if (!mbox) return json(400, { error: "Connect your mailbox first: open the Email tab and enter your email password.", code: "NO_MAILBOX" });
+    const { password } = JSON.parse(event.body || "{}");
+    if (!password) return json(400, { error: "Please enter your email password" });
+    const email = user.email; // mailbox is always the address you log into FieldDesk with
 
-    // Display name from FieldDesk profile
-    let fromName = "S&S Contracting Company LLC";
-    try {
-      const u = await db(token, `users?id=eq.${user.id}&select=full_name`);
-      if (u && u[0] && u[0].full_name) fromName = `${u[0].full_name} | S&S Contracting`;
-    } catch (e) {}
+    // 1) Test sending
+    const smtp = nodemailer.createTransport({ host: "smtp.ionos.com", port: 587, secure: false, auth: { user: email, pass: password } });
+    try { await smtp.verify(); }
+    catch (e) { return json(400, { error: "IONOS rejected that password (sending). Double-check it by logging into IONOS webmail." }); }
 
-    const transporter = nodemailer.createTransport({
-      host: mbox.smtpHost, port: 587, secure: false,
-      auth: { user: mbox.email, pass: mbox.password },
-    });
+    // 2) Test receiving
+    const imap = new ImapFlow({ host: "imap.ionos.com", port: 993, secure: true, auth: { user: email, pass: password }, logger: false });
+    try { await imap.connect(); await imap.logout(); }
+    catch (e) { return json(400, { error: "IONOS rejected that password (inbox). Double-check it by logging into IONOS webmail." }); }
 
-    const mail = {
-      from: `"${fromName}" <${mbox.email}>`,
-      to: p.toName ? `"${String(p.toName).replace(/"/g, "")}" <${p.to}>` : p.to,
-      cc: p.cc || undefined,
-      replyTo: mbox.email,
-      subject: p.subject,
-      text: p.text || undefined,
-      html: p.html || undefined,
-      inReplyTo: p.inReplyTo || undefined,
-      references: p.references || p.inReplyTo || undefined,
-      attachments: (p.attachments || []).map(a => ({ filename: a.filename, content: a.content, encoding: "base64", contentType: a.contentType })),
-    };
-    const info = await transporter.sendMail(mail);
-
-    // IONOS doesn't keep a copy of mail sent this way, so put one in the user's Sent folder.
-    try {
-      const raw = await new MailComposer({ ...mail, messageId: info.messageId }).compile().build();
-      const imap = new ImapFlow({ host: mbox.imapHost, port: 993, secure: true, auth: { user: mbox.email, pass: mbox.password }, logger: false });
-      await imap.connect();
-      const boxes = await imap.list();
-      const sent = boxes.find(b => b.specialUse === "\\Sent") || boxes.find(b => /^(sent|sent items|gesendete objekte)$/i.test(b.name));
-      if (sent) await imap.append(sent.path, raw, ["\\Seen"]);
-      await imap.logout();
-    } catch (e) { console.error("Sent-folder copy failed:", e.message); }
-
-    return json(200, { success: true, messageId: info.messageId, from: mbox.email });
+    const row = { user_id: user.id, email, enc_password: encrypt(password), verified_at: new Date().toISOString(), updated_at: new Date().toISOString() };
+    await db(token, "user_mail_accounts?on_conflict=user_id", { method: "POST", body: row, prefer: "resolution=merge-duplicates,return=minimal" });
+    return json(200, { success: true, email });
   } catch (err) {
     return json(500, { error: err.message });
   }
