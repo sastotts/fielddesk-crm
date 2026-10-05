@@ -2208,6 +2208,8 @@ function EmailView({dbUser, authUser, contacts}){
   const [loading, setLoading] = React.useState(true);
   const [account, setAccount] = React.useState(null);
   const [password, setPassword] = React.useState("");
+  const loginEmail = (authUser&&authUser.email)||(dbUser&&dbUser.email)||"";
+  const [mailEmail, setMailEmail] = React.useState(/@sandscontractingco\.com$/i.test(loginEmail)?loginEmail:"");
   const [busy, setBusy] = React.useState(false);
   const [err, setErr] = React.useState("");
   const [composing, setComposing] = React.useState(false);
@@ -2223,10 +2225,11 @@ function EmailView({dbUser, authUser, contacts}){
   React.useEffect(()=>{ load(); },[]);
 
   const connect = async() => {
+    if(!mailEmail){ setErr("Enter your work email address."); return; }
     if(!password){ setErr("Enter your email password."); return; }
     setBusy(true); setErr("");
     try {
-      await callMailFn("connect-mailbox","POST",{password});
+      await callMailFn("connect-mailbox","POST",{email:mailEmail.trim(),password});
       setPassword("");
       await load();
     } catch(e){ setErr(e.message); }
@@ -2249,8 +2252,11 @@ function EmailView({dbUser, authUser, contacts}){
         <div style={{fontSize:34,textAlign:"center",marginBottom:6}}>✉️</div>
         <div style={{fontSize:17,fontWeight:700,color:C.dark,textAlign:"center",marginBottom:4}}>Connect your mailbox</div>
         <div style={{fontSize:12.5,color:C.sub,textAlign:"center",marginBottom:18,lineHeight:1.5}}>
-          Enter the password for <strong>{myEmail}</strong> (the same one you use for IONOS webmail). It's stored encrypted and only used to send and receive your email.
+          Enter your work email and its password (the same ones you use for IONOS webmail). The password is stored encrypted and only used to send and receive your email.
         </div>
+        <input type="email" value={mailEmail} onChange={e=>setMailEmail(e.target.value)}
+          placeholder="you@sandscontractingco.com" autoComplete="username"
+          style={{width:"100%",boxSizing:"border-box",padding:"10px 12px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:14,outline:"none",marginBottom:10}}/>
         <input type="password" value={password} onChange={e=>setPassword(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")connect();}}
           placeholder="Email password" autoComplete="current-password"
           style={{width:"100%",boxSizing:"border-box",padding:"10px 12px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:14,outline:"none",marginBottom:10}}/>
