@@ -92,9 +92,11 @@ exports.handler = async (event) => {
     }
     if (event.httpMethod !== "POST") return json(405, { error: "Method not allowed" });
 
-    const { password } = JSON.parse(event.body || "{}");
+    const body = JSON.parse(event.body || "{}");
+    const password = body.password;
+    const email = String(body.email || user.email || "").trim().toLowerCase();
+    if (!email || email.indexOf("@") < 1) return json(400, { error: "Please enter your work email address" });
     if (!password) return json(400, { error: "Please enter your email password" });
-    const email = user.email; // mailbox is always the address you log into FieldDesk with
 
     // 1) Test sending
     const smtp = nodemailer.createTransport({ host: "smtp.ionos.com", port: 587, secure: false, auth: { user: email, pass: password } });
